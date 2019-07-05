@@ -1,0 +1,2882 @@
+\documentclass[8pt,a4paper]{scrartcl}
+
+\usepackage[ngerman]{babel}
+
+\input{../Headerfiles/Packages}
+\input{../Headerfiles/Titles}
+\input{../Headerfiles/Commands}
+\input{../Headerfiles/ENVIRONMENTS}
+\parindent 0pt
+
+\title{Model Predictive Control}
+\author{GianAndrea Müller}
+
+\newtheorem{define}{Definition}
+\newtheorem{theorem}{Theorem}
+
+\begin{document}
+
+\begin{multicols*}{3}
+\maketitle
+\tableofcontents
+\end{multicols*}
+
+\newpage
+
+\begin{multicols*}{3}
+
+\setcounter{section}{-1}
+
+\section{Definitions}
+
+\begin{define}
+\textbf{Infimum}: Greatest lower bound to a set.
+\end{define}
+
+\begin{define}
+A system is \textbf{feasible} if it does not violate any constraint.
+\end{define}
+
+\begin{define}
+A \textbf{recursively feasible} system is defined to allow a series of control inputs that drives it to the target state and keeps it there without violating any constraints.
+\end{define}
+
+\section{Basics}
+\subsection{Requirements for MPC}
+\begin{enumerate}
+\ncompaq
+\item A model of the system
+\item A state estimator
+\item Definition of the optimal control problem
+\item Setup of the omptimization problem
+\item Optimal control sequence
+\item Verification of performance
+\end{enumerate}
+\newcommand{\MPC}{
+\mportabflex{lll}{
+$U^\ast_k(x(k)):=$&$\argmin$&$\sum\limits_{i=0}^{N-1}l(x_{k+i},u_{k+i})$\\
+&subj. to\\
+\multicolumn{2}{l}{\small{measurement}}&$x_k=x(k)$\\
+\multicolumn{2}{l}{\small{system model}}&$x_{k+i+1}=Ax_{k+i}+Bu_{k+i}$\\
+\multicolumn{2}{l}{\small{state constraints}}&$x_{k+i}\in\mathcal{X}$\\
+\multicolumn{2}{l}{\small{input constraints}}&$u_{k+i}\in\mathcal{U}$\\
+\multicolumn{2}{l}{\small{optimization variables}}&$U_k=\{u_k,u_{k+1},\ldots,u_{k+N-1}\}$
+}
+}
+\subsection{General MPC Problem}
+\MPC
+\subsection{Models of Dynamic Systems}
+
+\begin{TTable}{ll}
+Abbreviation&System Specification\\
+TI&Time Invariant\\
+LTI&Linear Time Invariant\\
+CT&Continuous Time\\
+DT&Discrete Time\\
+SS&State Space\\
+\end{TTable}
+
+\subsubsection{Nonlinear, TI, CT, SS}
+\importable{$\dot{x}$&$=g(x,u)$\\$y$&$=h(x,u)$}
+
+\note{
+\begin{tabular}{llll}
+$x\in\mathbb{R}^n$&state v.&$g(x,u):\mathbb{R}^n\times\mathbb{R}^m\rightarrow\mathbb{R}^n$&system dynamics\\
+$u\in\mathbb{R}^m$&input v.&$h(x,u):\mathbb{R}^n\times\mathbb{R}^m\rightarrow\mathbb{R}^p$&output function\\
+$y\in\mathbb{R}^p$&output v.
+\end{tabular}}
+
+\subsubsection{LTI,CT,SS}
+
+\importable{$\dot{x}$&$=A^cx+B^cu$\\$y$&$=Cx+Du$}
+
+\note{
+\begin{tabular}{llll}
+$x\in\mathbb{R}^n$&state vector&$A^c\in\mathbb{R}^{n\times n}$&system matrix\\
+$u\in\mathbb{R}^m$&input vector&$B^c\in\mathbb{R}^{n\times m}$&input matrix\\
+$y\in\mathbb{R}^p$&output vector&$C\in\mathbb{R}^{p\times n}$&output matrix\\
+&&$D\in\mathbb{R}^{p\times m}$&throughput matrix
+\end{tabular}}
+
+\textbf{Solution to linear ODEs}
+
+The solution to $\dot{x}(t)=A^cx(t)+B^cu(t)$ with $x_0:=x(t_0)$ is:
+
+\important{$x(t)=e^{A^c(t-t_0)}x_0+\int_{t_0}^te^{A^c(t-\tau)}Bu(\tau)d\tau$}
+
+where $e^{A^ct}:=\sum\limits_{n=0}^\infty\frac{(A^ct)^n}{n!}$ (always converges)
+
+\textbf{Linearization}
+
+\mportant{$x_s,u_s:\ \dot{x}_s=g(x_s,u_s) = 0,y_s = h(x_s,u_s)$}
+
+\small
+\begin{align*}
+\dot{x}&=\underbrace{g(x_s,u_s)}_{=0}+\underbrace{\left.\frac{\partial g}{\partial x^T}\right|_{\substack{x=x_s\\u=u_s}}}_{=A^c}\underbrace{(x-x_s)}_{=\Delta x}+\underbrace{\left.\frac{\partial g}{\partial u^T}\right|_{\substack{x=x_s\\u=u_s}}}_{=B^c}\underbrace{(u-u_s)}_{=\Delta u}\\
+y&=\underbrace{h(x_s,u_s)}_{y_s}+\underbrace{\left.\frac{\partial h}{\partial x^T}\right|_{\substack{x=x_s\\u=u_s}}}_{=C}(x-x_s)+\underbrace{\left.\frac{\partial h}{\partial u^T}\right|_{\substack{x=x_s\\u=u_s}}}_{=D}(u-u-s)
+\end{align*}
+\normalsize
+
+\subsubsection{TI, DT, SS Systems}
+
+\importable{$x(k+1)$&$=g(x(k),u(k))$\\$y(k)$&$=h(x(k),u(k))$}
+
+\note{
+\begin{tabular}{llll}
+$x\in\mathbb{R}^n$&state v.&$g(x,u):\mathbb{R}^n\times\mathbb{R}^m\rightarrow\mathbb{R}^n$&system dynamics\\
+$u\in\mathbb{R}^m$&input v.&$h(x,u):\mathbb{R}^n\times\mathbb{R}^m\rightarrow\mathbb{B}^p$&output function\\
+$y\in\mathbb{R}^p$&output v.
+\end{tabular}}
+
+\important{$x(k+N)=A^Nx(k)+\sum\limits_{i=0}^{N-1}A^iBu(k+N-1-i)$}
+
+\subsubsection{Euler Discretization of Nonlinear, TI Systems}
+
+\mportable{$\dot{x}^c(t)$&$=g^c(x^c(t),u^c(t))$\\$y^c(t)$&$=h^c(x^c(t),u^c(t))$}
+
+\important{$\dot{x}^c(t)\approx \frac{x^c(t+T_s)-x^c(t)}{T_s}$}
+
+\importable{$x(k+1)$&$=x(k)+T_sg^c(x(k),u(k))=g(x(k),u(k))$\\$y(k)$&$=h^c(x(k),u(k))=h(x(k),u(k))$}
+
+\subsubsection{Euler Discretization of LTI Systems}
+
+\mportable{$x(k+1)$&$=Ax(k)+Bu(k)$\\$y(k)$&$=Cx(k)+Du(t)$}
+
+\important{$A=I+T_sA^c$, $B=T_sB^c$, $C=C^c$, $D=D^c$}
+
+\subsubsection{Exact Discretization of LTI Systems}
+
+\mportable{$x(t_{k+1})$&$=e^{A^cT_s}x(t_k)+\int_{t_k}^{t_{k+1}}e^{A^c(t_{k+1}-\tau)}B^cd\tau u(t_k)$\\&$=\underbrace{e^{A^cT_s}}_{\overset{\Delta}{=}A}x(t_k)+\underbrace{\int_0^{T_s}e^{A^c(T_s-\tau')}B^cd\tau'}_{\overset{\Delta}{=}B} u(t_k)$}
+
+if A invertible: $B=(A^c)^{-1}(A-I)B^c$
+
+\mportant{$e^{A^c}=\sum\limits_{k=0}^\infty\frac{1}{k!}{A^c}^k$ (always converges)}
+
+\subsection{Analysis of LTI DT Systems}
+\subsubsection{Coordinate Transformations}
+
+\mportable{$x(k+1)$&$=Ax(k)+Bu(k)$\\$y(k)$&$=Cx(k)+Du(k)$}
+
+Consider: $\tilde{x}(k)=Tx(k)$ s.t. $T$ is invertible $(det(T)\neq 0)$.
+
+\mportable{$T^{-1}\tilde{x}(k+1)$&$=AT^{-1}\tilde{x}(k)+Bu(k)$\\$y(k)$&$=CT^{-1}\tilde{x}(k)+Du(k)$}
+
+\importable{$\tilde{x}(k+1)$&$=\underbrace{TAT^{-1}}_{\tilde{A}}\tilde{x}+\underbrace{TB}_{\tilde{B}}u(k)$\\$y(k)$&$=\underbrace{CT^{-1}}_{\tilde{C}}\tilde{x}(k)+\underbrace{D}_{\tilde{D}}u(k)$}
+
+\subsubsection{Stability of Linear Systems}
+
+\mportant{$x(k+1)=Ax(k)$}
+
+is globally asymptotically stable
+
+\mportant{$\lim\limits_{k\rightarrow\infty}x(k)=0,\forall x(0)\in\mathbb{R}^n \Leftrightarrow |\lambda_j|<1,\ \forall j=1,\ldots,n$}
+
+For continuous systems: Re$(\lambda_i)<0$
+
+\subsubsection{Controllability}
+
+\mportant{$x(k+1)=Ax(k)+Bu(k)$}
+
+is controllable if for any pair of states $x(0),\ x^\ast$ there exists a finite time N and a control sequence such that $x(N)=x^\ast$.
+
+\mportant{$x^\ast=x(N)=A^Nx(0)+\begin{bmatrix}B&AB&\cdots&A^{N-1}B\end{bmatrix}\begin{bmatrix}u(N-1)\\u(N-2)\\ \vdots\\ u(0)\end{bmatrix}$}
+
+\textbf{Cayley-Hamilton Theorem}: $A^k$ can be expressed as linear combinations of $A^j,\ j\in0,1,\ldots,n-1$ for $k\geq n$. Hence for all $N\geq n$:
+
+\mportant{range$\begin{bmatrix}B&AB&\cdots&A^{N-1}B\end{bmatrix}$=range$\begin{bmatrix}B&AB&\cdots&A^{n-1}B\end{bmatrix}$}
+
+Thus if the system cannot be controlled to $x^\ast$ in $n$ steps, then it cannot in an arbitrary number of steps.
+
+\importname{Controllability Matrix}{$\mathcal{C}=\begin{bmatrix}B&AB&\cdots&A^{n-1}B\end{bmatrix}$}
+
+The system is controllable if $\mathcal{C}\begin{bmatrix}u(n-1)\\u(n-2)\\ \vdots\\u(0)\end{bmatrix}=x^\ast-A^nx(0)$ has a solution for all right-hand sides.
+
+\important{The system is controllable if $\mathcal{C}$ has full rank.}
+
+A system is called \textbf{stabilizable} if there exits a input sequence that returns the state to the origin asymptotically, starting from any point. True if all uncontrollable modes are stable.
+
+\important{rank$([\lambda_j I-A|B])=n\ \forall\lambda_j\in\Lambda_A^+\Rightarrow (A,B)$ is stabilizable}
+
+where $\Lambda_A^+$ is the set of all eigenvalues of A lying on or outside the unit circle.
+
+\subsubsection{Observability}
+
+\mportable{$x(k+1)$&$=Ax(k)$\\$y(k)$&$=Cx(k)$}
+
+is \textbf{observable} if there exists a finite N such that for every $x(0)$ the measurements $y(0),y(1),\ldots,y(N-1)$ uniquely distinguish the inital state $x(0)$.
+
+Are the linear equations $\begin{bmatrix}y(0)\\y(1)\\ \vdots\\y(N-1)\end{bmatrix}=\begin{bmatrix}C\\CA\\ \vdots\\CA^{N-1}\end{bmatrix}x(0)$ unique?
+
+\importname{\\Observability matrix}{$\mathcal{O}=\begin{bmatrix}C^T&(CA)^T&\cdots&(CA^{n-1})^T\end{bmatrix}^T$}
+
+First replace $N$ by $n$ (\textbf{Cayley-Hamilton}). Then the solution is unique if the columns of $\mathcal{O}$ are linearly independent.
+
+\finn
+
+A system is called \textbf{detectable} if it is possible to construct from the measurement sequence a sequence of state estimates that converges to the true state asymptotically, starting from an arbitrary initial estimate. True if all of its unobservable modes are stable.
+
+\important{rank$([A^T-\lambda_jI|C^T])=n\ \forall\lambda_j\in\Gamma_A^+\Rightarrow (A,C)$}
+
+where $\Gamma_A^+$ is the set of all eigenvalues of A lying on or outside the unit circle.
+
+\subsection{Stability of nonlinear DT Systems}
+
+\mportant{$x(k+1)=g(x(k))$}
+
+with an equilibrium point at $0$ i.e. $g(0)=0$.
+
+\importname{\\ Lyapunov stability}{$\forall\ \epsilon>0\ \exists\ \delta(\epsilon)\ :\ ||x(0)||<\delta(\epsilon)\rightarrow||x(k)||<\epsilon,\forall k\geq 0$}
+
+An equilibrium point is \textbf{asymptotically stable} in $\Omega\subseteq\mathbb{R}^n$ if it is Lyapunov stable and \textbf{attractive}.
+
+\importname{Attractivity}{$\lim\limits_{k\rightarrow\infty}x(k)=0,\ \forall x(0)\in\Omega$}
+
+and \textbf{globally asymptotically stable} if it is asymptotically stable and $\Omega=\mathbb{R}^n$.
+
+\subsubsection{Lyapunov function}
+
+\begin{define}
+Equilibrium point $x=0$, $\Omega\subset\mathbb{R}^n$ a closed an bounded set containing the origin. A function $V:\mathbb{R}^n\rightarrow\mathbb{R}$, continuous at the origin, finite for every $x\in\Omega$, and such that:
+
+\importabflex{l}{$V(0)=0$ and $V(x)>0,\ \forall x\in\Omega\setminus\{0\}$\\$V(g(x))-V(x)\leq -\alpha(x)\forall x\in\Omega\setminus\{0\}$}
+
+where $\alpha:\mathbb{R}^n\rightarrow\mathbb{R}$ is continuous positive definite, is called a \textbf{Lyapunov function.}
+\end{define}
+
+\begin{theorem}If a system admits a Lyapunov function $V(x)$, then $x=0$ is \textbf{asymptotically stable} in $\Omega$.
+\end{theorem}
+
+\begin{theorem}If a system admits a Lyapunov function $V(x)$ for $\Omega=\mathbb{R}^n$, which additionally satisfies $||x||\rightarrow\infty\Rightarrow V(x)\rightarrow\infty$ then $x=0$ is \textbf{globally asymptotically stable}
+\end{theorem}
+
+\subsubsection{Lyapunov Stability of LTI DT Systems}
+
+\mportant{$x(k+1)=Ax(k)$}
+
+Candidate Lyapunov function: $V(x)=x^TPx$ with $P$ positive definite.
+
+\finn
+
+Energy decrease condition:
+
+\mportable{$V(Ax(k))-V(x(k))$&$=x^T(k)A^TPAx(k)-x^TPx(k)$\\&$=x^T(k)(A^TPA-P)x(k)\leq-\alpha(x(k))$}
+
+We can choose $\alpha(x(k))=x^TQx(k),Q>0$, thus we have to find $P>0$ that solves the
+
+\importname{DT Lyapunov equation}{$A^TPA-P=-Q,\ Q>0$}
+
+\textbf{Theorem 1}: The discrete-time Lyapunov euqation has a unique solution $P>0$ if and only if A has all eigenvalues inside the unit circle, i.e. if and only if the system $x(k+1)=Ax(k)$ is stable.
+
+\begin{itemize}
+\item Note that stability is always \glqq global\grqq  for linear systems.
+\item The infinite horizon cost-to-go for an asymptotically stable autonomous system $x(k+1)=Ax(k)$ with a quadratic cost function
+\end{itemize}
+
+\importable{$\phi(x(0))$&$=\sum\limits_{k=0}^\infty x(k)^TQx(k)=\sum\limits_{k=0}^\infty x(0)^T(A^k)^TQA^kx(0)$\\
+&$=x(0)^TPx(0)$}
+
+\section{Optimal Control}
+
+\mportant{$J^\ast(x(0)):=\min\limits_U J(x(0),U)$}
+
+\mportabflex{rl}{subj. to $\quad x_{i+1}$&$=g(x_i,u_i),\ i=0,\ldots, N-1$\\$h(x_i,u_i)$&$\leq 0,\ i=0,\ldots, N-1$\\$x_N$&$\in\mathcal{X}_f$\\$x_0$&$=x(0)$}
+
+\subsection{Linear Quadratic Optimal Control}
+
+\mportname{linear DT TI systems}{$x(k+1)=Ax(k)+Bu(k)$}
+
+\mportname{\\ quadratic cost functions}{$J(x_0,U):=x_N^TPx_N+\sum\limits_{i=0}^{N-1}(x_i^TQx_i+u_i^TRu_i)$}
+
+$Q=C^TC$ and $R=\rho I$ 
+
+\mportname{energy in input and output signals}{$\sum\limits_{i=0}^N||y_i||_2^2+\rho||u_i||_2^2$}
+
+\note{
+Large $\rho$ $\Rightarrow$ small input energy, output weakly controlled
+
+Small $\rho$ $\Rightarrow$ large input energy, output strongly controlled}
+
+\subsection{Unconstrained Finite Horizon Control}
+
+\mportabflex{rl}{$J^\ast(x(0))$&$:=\min\limits_Ux_N^TPx_N+\sum\limits_{i=0}^{N-1}(x_i^TQx_i+u_i^TRu_i$\\subj. to $x_{i+1}$&$=Ax_i+Bu_i,\ i=0,\ldots,N-1$\\$x_0$&$=x(0)$}
+
+\begin{itemize}
+\ncompaq
+\item $P\succeq0$ with $P=P^T$, is the \textbf{terminal} weight
+\item $Q\succeq0$ with $Q=Q^T$, is the \textbf{state} weight
+\item $R\succ0$ with $R=R^T$, is the \textbf{input} weight
+\item N is the horizon length
+\item unpenalized states possible, no unpenalized inputs allowed!
+\end{itemize}
+
+\subsubsection{Batch approach}
+
+\mportant{
+$\begin{bmatrix}x_0\\x_1\\ \vdots\\x_N\end{bmatrix}=\underbrace{\begin{bmatrix}I\\A\\ \vdots\\A^N\end{bmatrix}}_{\mathcal{S}^x}x(0)+\underbrace{\begin{bmatrix}0&\cdots&\cdots&0\\B&0&\cdots&0\\AB&B&\cdots&0\\ \vdots&\ddots&\ddots&0\\A^{N-1}B&\cdots&AB&B\end{bmatrix}}_{\mathcal{S}^u}\begin{bmatrix}u_0\\u_1\\ \vdots\\u_N\end{bmatrix}$}
+
+\mportant{$X:=\mathcal{S}^x x(0)+\mathcal{S}^u U$}
+
+Then write the cost function using
+
+\mportant{$\bar{Q}:=$blockdiag$(Q,\ldots,Q,P)$ and $\bar{R}:=$blockdiag$(R,\ldots,R)$}
+
+\mportant{$J(x(0),U)=X^T\bar{Q}X+U^T\bar{R}U$}
+
+Replacing $X=\mathcal{S}^x x(0)+\mathcal{S}^u U$:
+
+\mportant{$J(x(0),U)=U^THU+2x(0)^TFU+x(0)^T(\mathcal{S}^x)^T\bar{Q}\mathcal{S}^xx(0)$}
+
+where $H:=(\mathcal{S}^u)^T\bar{Q}\mathcal{S}^u+\bar{R}$ and $F:=(\mathcal{S}^x)^T\bar{Q}\mathcal{S}^u$.
+
+\begin{itemize}
+\item Note that $H\succ 0$ since $R\succ 0$ and $(\mathcal{S}^u)^T\bar{Q}\mathcal{S}^u\succeq 0$, thus $H^{-1}$ is guaranteed to exist.
+\end{itemize}
+
+Setting the gradient equal to zero:
+
+\mportable{$\nabla_UJ(x(0),U)=2HU+2F^Tx(0)=0$\\$U^\ast(x(0))=-((\mathcal{S}^u)^T\bar{Q}\mathcal{S}^u+\bar{R})^{-1}(\mathcal{S}^u)^T\bar{Q}\mathcal{S}^xx(0)$}
+
+\textbf{Optimal cost:}
+
+\note{
+\mportable{$J^\ast(x(0))=$&$x(0)^T\Big((\mathcal{S}^x)^T\bar{Q}\mathcal{S}^x-(\mathcal{S}^x)^T\bar{Q}\mathcal{S}^u((\mathcal{S}^u)^T\bar{Q}\mathcal{S}^u+\bar{R})^{-1}\bullet$\\&$\bullet(\mathcal{S}^u)^T\bar{Q}\mathcal{S}^x\Big)x(0)$}}
+
+\subsubsection{Verification of the Batch approach with quadprog}
+
+Write the cost as a function of U.
+
+\mportable{$J_0(x(0),U)=(\mathcal{S}^x x(0)+\mathcal{S}^uU)^T\bar{Q}(\mathcal{S}^x x(0)+\mathcal{S}^uU)+U^T\bar{R}U$\\$U^THU+2x(0)^TFU+x(0)^T\mathcal{S}^{xT}\bar{Q}\mathcal{S}^xx(0)$}
+
+where $H:=\mathcal{S}^{uT}\bar{Q}\mathcal{S}^u$ and $F:=\mathcal{S}^{xT}\bar{Q}\mathcal{S}^u$
+
+\begin{verbatim}
+Hbig = (Hbig+Hbig')/2;
+
+[Ustar,costQ]=quadprog(2*Hbig,(2*x0'*Fbig)');
+
+costQ = costQ + x0'*Sx'*Qbar*Sx*x0;
+
+\end{verbatim}
+
+\subsubsection{Recursive Approach}
+
+Defining the j-step optimal cost-to-go: $J_j^\ast(x(j))$
+
+\note{The minimum of the cost attainable for the remainder of the horizon after step j.}
+
+\mportant{$J^\ast_j(x(j)):=\min\limits_{U_j\rightarrow N}x_N^TPx_N+\sum\limits_{i=j}^{N-1}(x_i^TQx_i+u_i^TRu_i)$}
+
+\mportable{subj. to&$x_{i+1}=Ax_i+Bu_i,\ i=j,\ldots,N-1$\\&$x_j=x(j)$}
+
+\mportant{see page 18-21 for an example}
+
+\textbf{Procedure:}
+
+\begin{enumerate}
+\ncompaq
+\item Start at step N
+
+\mportant{$J^\ast_N(x_N):=l_f(x_N)$}
+\item Iterate \textbf{backwards} for $i=N-1,\ldots, 0$ (DP iteration)
+
+\mportant{$J_I^\ast(x_i):=\min\limits_{u_i}l(x_i,u_i)+J_{i+1}^\ast(Ax_i+Bu_i)$}
+\item $J^\ast(x_0):=J_0^\ast(x_0)$ and the optimal controller is the optimizer $u_0^\ast(x_0)$
+\end{enumerate}
+
+\textbf{Requirements:}
+
+\begin{itemize}
+\ncompaq
+\item Closed-form representation of the function $J_i^\ast(x)$.
+\item Ability to compute a DP iteration.
+\end{itemize}
+
+\note{Often not possible, except for some special cases (e.g. LQR)}
+
+\subsubsection{Bellman's Principle of Optimality}
+
+For any solution for steps 0 to N to be optimal, any solution for steps j to N with $j\geq 0$, taken from the 0 to N solution, must itself be optimal for the j-to-N problem.
+
+\importable{$J_j^\ast(x_j)=\min\limits_{u_j}l(x_i,u_i)+J_{j+1}^\ast(x_{j+1})$&\\$\quad$subj. to $x_{j+1}=Ax_j+Bu_j$&}
+
+\subsubsection{LQR}
+
+One step problem:
+
+\mportable{$J_{N-1}^\ast(x_{N-1})=$&$\min\limits_{u_{N-1}}x_{N-1}^TQx_{N-1}+u_{N-1}^TRu_{N-1}+x_N^TP_Nx_N$\\&s.t. $x_N=Ax_{N-1}+Bu_{N-1}$\\&     $P_N=P$}
+
+\note{where $x_j^TP_jx_j$ refers to the optimal cost-to-go. $P_N=P$}
+
+Substitution and setting the derivative equal to 0 yields the optimality condition:
+
+\mportant{$u_{N-1}^\ast =-(B^TP_NB+R)^{-1}B^TP_NAx_{N-1}:=F_{N-1}x_{N-1}$}
+
+[..1-step cost to go \dahe same for 2-step cost to go \dahe recognise recursion..]
+
+\note{\important{$u_i^\ast=-(B^TP_{i+1}B+R)^{-1}B^TP_{i+1}Ax(i):=F_ix_i$ for $i=1,\ldots,N$}}
+
+\importname{\\Discrete Time Riccati equation (RDE)}{$P_i=A^TP_{i+1}A+Q-A^TP_{i+1}B(B^TP_{i+1}B+R)^{-1}B^TP_{i+1}A$}
+
+\note{Evaluation down to $P_0$ we obtain the N-step cost-to-go.}
+
+\subsection{Comparison Batch/Recursive Approach}
+
+\begin{itemize}
+\ncompaq
+\item Batch optimization returns a sequence of numeric values depending only on the inital state whereas the recursive approach yields feedback policies $u_i^\ast=F_ix_i$ depending on each $x_i$.
+\item They are identical if there are no disturbances.
+\item The recursive approach is more robust to disturbances and model errors, because if future states deviate the optimal input can still be computed.
+\item The recursive approach is computationally more attractive because it divides the problem into small calculations.
+\item Neither one method can deal with inequality constraints.
+\end{itemize}
+
+\subsubsection{Receding Horizon}
+
+\mypic{Pictures/RecedingHorizon}
+
+\mypic{Pictures/RecedingHorizon2}
+
+\textbf{The stability of finite horizon controllers highly depends on the chosen horizon length, as well as on the costs $R,\ Q$ and can be unintuitive.}
+
+\myspic{0.6}{Pictures/StabilityFHQCL}
+
+\subsubsection{Infinite Horizon}
+
+\mportable{$J_\infty(x(0))=\lim\limits_{u(\cdot)}\sum\limits_{i=0}^\infty \left(x_i^TQx_i+u_iRu_i\right)$\\subj. to $x_{i+1}=Ax_i+Bu_i,\quad i=0,1,2\ldots,\infty$\\$x_0=x(0)$}
+
+\importname{\\ Optimal input}{$u^\ast(k)=-(B^TP_{\infty}B+R)^{-1}B^TP_\infty Ax(k):=F_\infty x(k)$}
+
+\importname{\\ Infinite-horizon cost to go}{$J_\infty(x(k))=x^T(k)P_\infty x(k)$}
+
+\note{The matrix $P_\infty$ comes from an infinity recursion of the RDE.}
+
+\finn
+
+Assuming that the RDE does converge to some constant matrix $P_\infty$ it must satisfy the following (with $P_i=P_{i+1}=P_\infty$):
+
+\importname{\\Algebraic Ricati Equation (ARE)}{$P_\infty=A^TP_\infty A+Q-A^TP_\infty B(B^TP_\infty B+R)^{-1}B^TP_\infty A$}
+
+\begin{itemize}
+\ncompaq
+\item The constant feedback matrix $F_\infty$ is referred to as the asymptotic form of the \textbf{Linear Quadratic Regulator (LQR)}.
+\item The closed-loop system with $u(k)=F_\infty x(k)$ is \textbf{guaranteed} to be stable if $(A,B)$ is stabilizable and $(Q^\onha,A)$ is detectable.
+\item The infinite-horizon cost to go is actually a Lyapunov function for the system. Thus $\lim\limits_{k\rightarrow\infty}x(k)=0$
+\item Choices for the terminal cost:
+\begin{enumerate}
+\item Equal to $P_\infty$. To find it solve the are with $P_i=P_{i+1}$.
+\item Assuming no control action after the end of the horizon \dahe solve the Lypunov equation for P:
+
+\mportant{$APA^T+Q=P$}
+
+\note{This approach only makes sense if the system is asymptotically stable.}
+\item If we want the state and the input both to be zero after the end of the finite horizon, no P but an additional constraint is needed:
+
+\mportant{$x_{i+N}=0$}
+
+\end{enumerate}
+\end{itemize}
+
+\subsubsection{Bellman equation}
+
+If we can find a function J such that
+
+\importname{Bellman equation}{$J^\ast(x):=\min\limits_u l(x,u)+J^\ast (Ax+Bu)$}
+
+then $J^\ast(\cdot)=J^\ast_\infty(\cdot)$.
+
+
+
+\section{Convex Optimization}
+
+\mypic{Pictures/Convex}
+
+At each sample time:
+
+\begin{enumerate}
+\ncompaq
+\item Measure / estimate current state.
+\item Find the optimal input sequence for N steps ahead.
+\item Implement only the first control action $u_k^\ast$.
+\end{enumerate}
+
+\textbf{Mathematical Optimization:}
+
+\mportable{$\min\limits_{x\in\text{dom}(f)} f(x)$\\subj. to $g_i(x)\leq 0\quad i=1,\ldots,m$\\$h_i(x)=0\quad i=1,\ldots, p$}
+
+with $\mathcal{X}:=\{x\in\text{dom}(f)|g_i(x)\leq 0,\ i=0,\ldots,m,\ h_i(x)=0,\ i=0,\ldots,p\}$ the set of feasible decisions.
+
+\begin{itemize}
+\ncompaq
+\item \textbf{feasible point}: $x\in\text{dom}(f)$ satisfying the inequality and equality constraints.
+\item \textbf{strictly feasible point}: Feasible $x\in\text{dom}(f)$ strictly satisfying the inequality constraints.
+\item \textbf{Optimal value}: Lowest possible cost value $p^\ast=f(x^\ast)\overset{\Delta}{=}\min_{x\in\mathcal{X}}f(x)$ also denoted by $f^\ast$ or $J^\ast$.
+\item \textbf{Optimizer}: Any feasible $x^\ast$ that achieves smalles cost $p^\ast$. The optimizer is not always unique.
+\item \textbf{Local/global optimality}: 
+
+\sbss{\mypic{Pictures/Local}}{\mypic{Pictures/Global}}
+\item If $p^\ast=-\infty$ the problem is \textbf{unbounded below}.
+\item If $\mathcal{X}$ is empty the problem is \textbf{infeasible}.
+\item If $\mathcal{X}=\mathbb{R}^n$ the problem is \textbf{unconstrained}.
+\item The constraint $g_i(x)\leq 0$ is \textbf{active} if $g_i(\bar{x})=0$. \textbf{Inactive} otherwise.
+\item A \textbf{redundant} constraint does not change the feasible set.
+\end{itemize}
+
+\subsection{Software Tool: Matlab: Example}
+
+\mportable{$\min\limits_{x_1,x_2}|x_1+5|+|x_2-3|$\\subj. to $2.5\leq x_1 \leq 5$\\$-1\leq x_2\leq 1$}
+
+\textbf{Toolbox: CVX}
+
+\begin{verbatim}
+cvx_begin
+  %define cost function
+  variables x1 x2
+  %define constraints
+  minimize (abs(x1+5)+abs(x2-3))
+  subject to
+    2.5 <= x1 <= 5
+    -1 <= x2 y= 1
+cvx_end    %solves automatically
+\end{verbatim}
+
+\textbf{Toolbox: Yalmip}
+
+\begin{verbatim}
+sdpvar x1, x2;
+f = abs(x1+5) + abs(x2-3);
+X = set(2.5<=x1<=5) + set(-1<=x2<=1);
+solvedsp(X,f);
+\end{verbatim}
+
+\subsection{Convex sets}
+
+\begin{define}
+A \textbf{convex set} can be mathematically defined as:
+
+\[\mathcal{X}\text{ is convex }\Leftrightarrow\forall \lambda\in[0,1],\ \forall x,y\in\mathcal{X}\ \lambda x+(1-\lambda)y\in\mathcal{X}\]
+
+This can be graphically illustrated by taking any two points in the set and connecting them with a line. If the line stays within the set for all combinations of points the set is convex.
+\end{define}
+
+\textbf{Draw a line through 2 point in the set, if the line stays in the set it is convex.}
+
+\begin{itemize}
+\item \textbf{Affine Set}
+
+$\mathcal{X}=\{x\in\mathbb{R}^n\ |\ Ax=b\}$
+
+\note{A subspace is an affine set with $b=0$}
+\item A \textbf{hyperplane} is defined by $\{x\in\mathbb{R}^n\ |\ a^Tx=b\}$ for $a\neq 0$ where $a\in\mathbb{R}^n$ is the normal vector to the hyperplane.
+
+\item A \textbf{halfspace} is everything on one side of a hyperplane. It can be either \textbf{open} (strict inequality) or \textbf{closed} (non-strict inequality).
+
+\item An (unbounded) \textbf{polyhedron} is the intersection of a finite number of closed halfspaces.
+
+\note{A \textbf{polytope} is a bounded polyhedron.}
+
+\item \textbf{Cones} 
+
+\mypic{Pictures/Cones} A set $\mathcal{X}$ is a cone if for all $x\in\mathcal{X}$, and for all $\theta>0$, $\theta x\in\mathcal{X}$. If the cone contains $x=0$, it is \textbf{pointed}.
+
+\item \textbf{Ellipsoids} $\mathcal{X}:=\{x|(x-x_c)^TA^{-1}(x-x_c)\leq 1\}$
+
+\mypic{Pictures/Ellipsoid}
+
+The \textbf{Euclidean Ball} $B(x_C,r)$ is a special case of the ellipsoid for which $A=r^2 \mathbb{I}$, such that $B(x_C,r):=\{x|\ ||x-x_c||_2\leq r\}$.
+
+\end{itemize}
+
+\subsubsection{Norms}
+A \textbf{norm} is any function $f:\mathbb{R}^n\rightarrow \mathbb{R}$ satisfying:
+
+\begin{enumerate}
+\ncompaq
+\item $f(x)\geq 0$ and $f(x)=0\Rightarrow x=0$
+\item $f(tx)=|t|f(x)$ for scalar $t$
+\item $f(x+y)\leq f(x)+f(y)$, for all $x,y\in\mathbb{R}^n$
+\end{enumerate}
+
+\importname{$l_p$ norm}{$||x||_p:=\left[\sum\limits_{i=1}^n|x_i|^p\right]^{1/p}$}
+
+\importname{Norm Ball}{$\{x|\ ||x-x_c||\leq r\}$}
+
+where $x_c$ is the centre of the ball and r its radius. A ball is always convex for any norm.
+
+\subsubsection{Intersection}
+
+\important{The intersection of two or more convex sets is convex.}
+
+\mypic{Pictures/Intersection}
+
+\subsubsection{Convex Hull}
+
+The \textbf{convex hull} is the smallest convex set that contains $\mathcal{X}$.
+
+\note{
+\important{conv($\mathcal{X})=\left\{\left.\lambda_1x_1+\ldots\lambda_qx_q\right|\lambda_i\geq 0, i=1,\ldots,1,\ \sum\limits_{i=1}^q\lambda_i=1\right\}$}}
+
+\subsubsection{Union}
+
+\important{The union of two complex sets is not necessarily convex!}
+
+\subsection{Convex function}
+
+A function $f:$dom$(f)\rightarrow\mathbb{R}$ is \textbf{convex} iff dom$(f)$ is convex and 
+
+\importable{$f(\lambda x+(1-\lambda)y)\leq\lambda f(x)+(1-\lambda)f(y),$&\\$\ \forall\lambda\in(0,1),\ \forall x,y\in$dom$(f)$&}
+
+\note{The function $f$:dom$(f)\rightarrow\mathbb{R}$ is strictly convex if the inequality is strict.
+
+The function f is \textbf{concave} iff dom(f) is convex and -f(x) is convex.
+}
+
+\mypic{Pictures/ConvexFunction}
+
+\textbf{First order condition for convexity}
+
+\finn
+
+A function $f$dom$(f)\rightarrow\mathbb{R}$ with a convex domain is \textbf{convex} iff
+
+\important{$f(y)\geq f(x)+\nabla f(x)^T(y-x),\ \forall\ x,y\in$dom$(f)$}
+
+\note{First order approximation of f around any point x is a global underestimator of f}
+
+\finn
+
+\textbf{Second order condition for convexity}
+
+\finn
+
+A twice-differentiable function $f$:dom$(f)\rightarrow\mathbb{R}$ with convex domain is convex iff:
+
+\important{$\nabla^2 f(x)\succeq 0,\ \forall\ x\in$dom$(f)$}
+
+where $\nabla^2f(x)_{ij}=\frac{\partial^2f(x)}{\partial x_i\partial x_j}$
+
+\finn
+
+If dom$(f)$ is convex and $\nabla^2 f(x)\succ 0\ \forall x\in$dom$(f)$, then f is strictly convex.
+
+\textbf{Epigraph of a function}
+
+The \textbf{epigraph} of a function $f$:dom$(f)\rightarrow\mathbb{R}$ is the set
+
+\important{epi$(f):=\left\{\left.\begin{bmatrix}x\\t\end{bmatrix}\right|x\in\text{dom}(f),\ f(x)\leq t\right\}\subseteq$dom$(f)\times\mathbb{R}$}
+
+\textbf{A function is convex iff its epigraph is a complex set.}
+
+\mypic{Pictures/Epigraph}
+
+\subsubsection{Level and sublevel sets}
+
+The \textbf{level set} $L_\alpha$ of a function f for value $\alpha$ is the set of all $x\in$dom$(f)$ for which $f(x)=\alpha$
+
+\important{$L_\alpha:=\left\{x|x\in\text{dom}(f),f(x)=\alpha\right\}$}
+
+\note{For $f(x):\mathbb{R}^2\rightarrow\mathbb{R}$ these are \textbf{contour lines} of constant height.}
+
+\finn
+
+The \textbf{sublevel set} $C_\alpha$ of a function f for value $\alpha$ is:
+
+\important{$C_\alpha:=\left\{x|x\in\text{dom}(f),f(x)\leq\alpha\right\}$}
+
+\note{Function f is covex $\Rightarrow$ sublevel sets of f are complex for all $\alpha$ but not the other way around.}
+
+\finn
+
+See the script for examples of convex functions [p. 38-40].
+
+\subsection{Convexity preserving operations}
+
+\begin{itemize}
+\ncompaq
+\item \textbf{Non-negative weighted sum}
+
+If f is a function convex, then $\alpha f$ is convex for $\alpha\geq 0$. For several complex functions $g_i$, $\sum_i\alpha_i g_i$ is convex if all $\alpha_i\geq 0$.
+
+\item \textbf{Composite with affine function}
+
+If f is a convex function, then $f(Ax+b)$ is convex.
+
+\item \textbf{Pointwise maximum}
+
+If $f_1,\ldots,f_m$ are convex functions, then $f(x)=\max\{f_1(x),\ldots,f_m(x)\}$ is convex.
+
+\item \textbf{Pointwise supremum}
+
+If $f(x,y)$ is convex in x for every $y\in\mathcal{Y}$, then $g(x)=\sup\limits_{y\in\mathcal{Y}}f(x,y)$ is convex.
+
+\item \textbf{Parametric minimization}
+
+If $f(x,y)$ is convex in $(x,y)$ and the set $\mathcal{C}$ is convex, then 
+
+\mportant{$g(x)=\min\limits_{y\in\mathcal{C}}f(x,y)$}
+
+is convex
+\item \textbf{Composition with scalar functions}
+
+For $g:\mathbb{R}^n\rightarrow\mathbb{R}$ and $h:\mathbb{R}\rightarrow\mathbb{R},\ f(x)=h(g(x))$ is convex if:
+
+\begin{itemize}
+\ncompaq
+\item $g$ is convex, h is convex, $\tilde{h}$ is non-decreasing.
+\item $g$ is concave, $h$ is convex, $\tilde{h}$ is non-decreasing.
+\end{itemize}
+
+\item \textbf{Composition with vector functions}
+
+For $g:\mathbb{R}^n\rightarrow\mathbb{R}^k$ and $h:\mathbb{R}^k\rightarrow \mathbb{R},\ f(x)=h(g(x))=h(g_1(x),\ldots,g_k(x))$ is convex if:
+
+\begin{itemize}
+\ncompaq
+\item Each $g_i$ is convex, $h$ is convex, $\tilde{h}$ is non-decreasing in each argument.
+\item Each $g_i$ is concave, $h$ is convex, $\tilde{j}$ is non-decreasing in each argument.
+\end{itemize}
+\end{itemize}
+
+\subsection{Convex Optimization Problem}
+
+\mportable{$\min\limits_{x\in\text{dom}(f)} f(x)$\\subj. to $g_i(x)\leq 0\quad i=1,\ldots,m$\\$h_i(x)=0\quad i=1,\ldots, p$}
+
+where $f,g_i$ and dom$(f(x))$ are convex and $h_i(x)=a_i^Tx-b$ are affine!
+
+\finn
+
+Thus the problem can be rewritten as:
+
+\mportable{$\min\limits_{x\in\text{dom}(f(x))}f(x)$\\subj. to $g_i(x)\leq  0\ i=1,\ldots,m$\\$Ax=b\quad A\in\mathbb{R}^{p\times m}$}
+
+\textbf{Important property}: Feasible set of a convex optimization problem is convex.
+ 
+
+\subsubsection{Local and Global Optimality}
+
+For a convex optimization problem, any locally optimal solution is globally optimal!
+
+\subsubsection{Equivalent Optimization Problems}
+
+Two problems are called equivalent if the solution to one can be inferred from the solution to the other.
+
+\textbf{Introducing equality constraints:}
+
+\mportable{$\min\limits_x f(A_0 x+b_0)$\\subj. to $g_i(A_ix+b_i)\leq 0\ i=1,\ldots,m$}
+
+is equivalent to 
+
+\mportable{$\min\limits_{x,y_i} f(y_0)$\\subj. to $g_i(y_i)\leq 0\ i=1,\ldots,m$\\ $A_ix+b_i=y_i\ i=0,1,\ldots,m$}
+
+Although the second version has a nicer cost function it features more constraints.
+
+\finn
+
+\textbf{Introducing slack variables $s_i$ for linear inequalities:}
+
+\mportable{$\min\limits_x f(x)$\\subj. to $A_i x\leq b_i\ i=1,\ldots,m$}
+
+is equivalent to 
+
+\mportable{$\min\limits_{x,s_i}f(x)$\\subj. to $A_i x+s_i = b_i\ i=1,\ldots, m$\\$s_i\geq 0\ i=1,\ldots,m$}
+
+\subsection{General Linear Program (LP)}
+
+Affine cost and constraint functions.
+
+\mportable{$\min\limits_{x\in\mathbb{R}}c^Tx$\\subj. to $Gx\leq h$\\$Ax=b$}
+
+\begin{itemize}
+\ncompaq
+\item Feasible set is a polyhedron.
+\item If P is empty the problem is infeasible.
+\item Each row of $A$ defines a half space.
+\end{itemize}
+
+\mypic{Pictures/Polyhedron}
+
+\textbf{Types of solutions:}
+
+\begin{enumerate}
+\ncompaq
+\item The LP solution is unbounded, i.e. $p^\ast =-\infty$.
+\item The LP solution is bounded, i.e. $p^\ast > -\infty$ and the optimizer is unique. $X_{opt}$ is a singleton.
+\item The LP solution is bounded and there are multiple optima. $X_{opt}$ is a subset of $\mathbb{R}^s$, which can be bounded or unbounded.
+\end{enumerate}
+
+%\subsubsection{$l_\infty$ minimization}
+%
+%\textbf{Constrained $l_\infty$ (Chebyshev) minimization:}
+%
+%\mportable{$\min\limits_{x\in\mathbb{R}^n}||x||_\infty$\\subj. to $Fx\leq g$}
+%
+%which is equivalent to
+%
+%\mportable{$\min\limits_{x\in\mathbb{R}^n}\left[\max\{x_1,\ldots,x_n,-x_1,\ldots,-x_n\}\right]$\\subj. to $Fx\leq g$}
+%
+%which is equivalent to
+%
+%\mportable{$\min\limits_{x,t} t$\\subj. to $x_i\leq t\ i=1,\ldots,n$\\$-x_i\leq t\ i=1,\ldots,n$\\$Fx\leq g$}
+%
+%e.g.
+%
+%\mportable{$\min\limits_{x,t}$\\subj. to $-\mathbf{1}t\leq x\leq\mathbf{1} t$\\$Fx\leq g$}
+%
+%\begin{itemize}
+%\ncompaq
+%\item The notation $'\mathbf{1}'$ indicates a vector of ones.
+%\item The constraint $-\mathbf{1}t\leq x\leq \mathbf{1}t$ bounds the absolute value of every element of x with a comon scalar t.
+%\end{itemize}
+%
+%\subsubsection{$l_1$ minimization}
+%
+%\mportant{$\min\limits_{x\in\mathbb{R}^n}||Ax-b||_1$\\subj. to $Fx\leq g$}
+%
+%This is equivalent to (assuming $A\in\mathbb{R}^{m\times n}$):
+%
+%\mportant{$\min\limits_{x\in\mathbb{R}^n}\left[\sum\limits_{i=1}^m\max\{(Ax-b)_i,-(Ax-b)_i\}\right]$\\subj. to $Fx\leq g$}
+%
+%which is equivalent to:
+%
+%\mportant{$\min\limits_{x\in\mathbb{R}^n,t\in\mathbb{R}^m}t_1+\cdots+t_m$\\subj. to $(Ax-b)_i\leq t_i\ i=1,\ldots,m$\\ $-(Ax-b)_i\leq t_i\ i=1,\ldots,m$\\$Fx\leq g$}
+%
+%e.g.
+%
+%\mportant{$\min\limits_{x\in\mathbb{R}^n,t\in\mathbb{R}^m}\mathbf{1}^Tt$\\subj. to $-t\leq(Ax-b)\leq t$\\$Fx\leq g$}
+%
+%\subsubsection{Piecewise Affine Minimization}
+%
+%\mportant{$\min\limits_x\left[\max\limits_{i=1,\ldots,m}\{c_i^Tx+d_i\}\right]$\\subj. to $Gx\leq h$}
+%
+%is equivalent to an LP
+%
+%\mportant{$\min\limits_{x,t} t$\\subj. to $c_i^Tx+d_i\leq t\ i=1,\ldots, m$\\$Gx\leq h$}
+%
+%\note{Adding variables and rewriting the problem in epigraph-form.}
+
+\subsection{General Quadratic Program}
+
+\mportant{$\min\limits_{x\in\mathbb{R}^n}\onha x^THx+q^Tx+r$\\subj. to $Gx\leq h$\\$Ax = b$}
+
+\begin{itemize}
+\ncompaq
+\item Constant r can be left out since it does not effect the optimum.
+\item Convex if $H\succ 0$, otherwise there are non-unique solutions.
+\item Problems with concave objective $H\not\succeq 0$ are quadratic programs, but hard.
+\end{itemize}
+
+\textbf{Types of solutions:}
+
+\begin{enumerate}
+\ncompaq
+\item The optimizer lies strictly inside the feasible polyhedron.
+\item The optimizer lies on the boundary of the feasible polyhedron.
+\end{enumerate}
+
+%\subsubsection{Least squares}
+%
+%\mportant{$\min\limits_x||Ax-b||_2^2$}
+%
+%\begin{itemize}
+%\ncompaq
+%\item Analytical solution $A^\dagger b$ ($A^\dagger$ is the pseudoinverse).
+%\item Extra linear constraints $l\leq x\leq u$ can be added, although the QP would no longer have an analytical solution.
+%\end{itemize}
+%
+%\subsubsection{Linear program with random cost}
+%
+%\mportant{$\min\limits_x\mathbb{E}[c^Tx]+\gamma\text{var}(c^Tx)=\bar{c}^Tx+\gamma x^T\Sigma x$\\subj. to $Gx\geq h$\\$Ax=b$}
+%
+%\begin{itemize}
+%\ncompaq
+%\item Random cost function vector c with mean $\bar{c}$ and covariance $\Sigma$, we wish to penalize expected cost plus a \glqq risk premium\grqq $\lambda$ on the variance.
+%\item Hence $c^Tx$ is a random variable with mean $\bar{c}^Tx$ and variance $x^T\Sigma x$.
+%\item Large $\gamma$ means large risk aversion - we prefer a small variance to the lowest expected cost.
+%\end{itemize}
+%
+%\subsubsection{Tikhonov Regularization}
+%
+%Least squares with an extra penalty for nonzero terms.
+%
+%\mportant{$\min\limits_{x\in\mathbb{R}^n}||Ax-b||_2^2+\gamma||x||_1$}
+%
+%which is equivalent to:
+%
+%\mportant{$\min\limits_{x\in\mathbb{R}^n}\ ||Ax-b||_2^2+\gamma\cdot\mathbf{1}^Tt$\\subj. to $-t\leq x\leq t$}
+%
+%\begin{itemize}
+%\ncompaq
+%\item A larger penalty $\gamma$ will tend to produce sparser solutions.
+%\item Note that we have converted an \textbf{unconstrained} problem into a larger \textbf{constrained} one to get it into standard QP form.
+%\item Requires $\gamma\geq 0$ for convexity.
+%\end{itemize}
+
+\section{Duality}
+
+\subsection{The Lagrange Dual Problem}
+
+\mportant{$\min\limits_{x\in\text{dom}(f)}f(x)$\\subj. to $g_i(x)\leq 0\ i=1,\ldots m$\\$h_i(x)=0\ i=1,\ldots p$}
+
+with (primal) decision variable x, domain dom(f) and optimal value $p^\ast$.
+
+\finn
+
+\textbf{Lagrangian function:} $L:$dom$(f)\times\mathbb{R}^m\times\mathbb{R}^p\rightarrow\mathbb{R}$
+
+\mportant{$L(x,\lambda,\nu)=f(x)+\sum\limits_{i=1}^m\lambda_ig_i(x)+\sum\limits_{i=1}^p\nu_ih_i(x)$}
+
+\begin{itemize}
+\ncompaq
+\item $\lambda_i$: inequality Lagrange multiplier for $g_i(x)\leq 0$.
+\item $\nu_i$: inequality Lagrange multiplier for $h_i(x)=0$.
+\item Lagrangian is a weighted sum of the objective and constraint functions.
+\end{itemize}
+
+\textbf{Lagrange Dual function:}
+
+\finn
+
+\mportable{$d(\lambda,\nu)$&$=\inf\limits_{x\in\text{dom}(f)}L(x,\lambda,\nu)$\\&$=\inf\limits_{x\in\text{dom}(f)}\left[f(x)+\sum\limits_{i=1}^m\lambda(i)g_i(x)+\sum\limits_{i=1}^p\nu_ih_i(x)\right]$}
+
+\begin{itemize}
+\ncompaq
+\item The dual function is always a \textbf{convex} function.
+\item $d(\lambda,\nu)$ is the pointwise infimum of affine functions.
+\item dual function generates lower bounds for $p^\ast$.
+
+\mportant{$d(\lambda,\nu)\leq p^\ast,\ \forall(\lambda\geq 0,\nu\in\mathbb{R}^p)$}
+\item $d(\lambda,\nu)$ might be $-\infty$
+
+\mportant{dom$(d):=\{\lambda,\nu|d(\lambda,\nu)>-\infty\}$}
+\end{itemize}
+
+\note{If $d(\lambda,\nu)$ is close to $f(x)$ we know that we are close the the optimum.}
+
+\important{$d(\lambda,\nu)\leq d^\ast\leq p^\ast\leq f(x)\ \forall\ x\in\mathcal{X}$}
+
+\subsubsection{Example: Least norm solution to linear system}
+
+\mportant{$\min\limits_{x\in\mathbb{R}}x^Tx$\\subj. to $Ax=b$}
+
+\textbf{Lagrangian:} $L(x,\nu)=x^Tx+\nu^T(Ax-b)$
+
+\finn
+
+\textbf{Dual function}:
+
+\begin{enumerate}
+\ncompaq
+\item Minimize the Lagrangian by setting its gradient zero
+$\nabla_xL(x,\nu)=2x+A^T\nu=0\Rightarrow x=-\onha A^T\nu$
+\item Substitute back into Lagrangian to get Dual function:
+
+\important{$d(\nu)=-\frac{1}{4}\nu^TAA^T\nu-b^T\nu\leq p^\ast$ for every $\nu$}
+\end{enumerate}
+
+\subsubsection{Example: (Recitation) Duality of an LP}
+
+\mportant{$\min\limits_x \underbrace{c^Tx}_{f(x)}$\\sb.t. $\underbrace{A'x-b'}_{g(x)}\leq0$\\$\underbrace{A''x-b''}_{h(x)}=0$}
+
+\begin{enumerate}
+\ncompaq
+\item \textbf{Rewrite equality constraint as inequality constraint:}
+
+\mportant{$h(x)=0\Leftrightarrow h(x)\leq 0 \&\& -h(x)\leq 0$}
+
+\mportant{$\min\limits_x c^Tx$\\sb.t. $Ax-b\leq 0\quad A=\begin{bmatrix}A'\\A''\\-A''\end{bmatrix},\ b=\begin{bmatrix}b'\\b''\\-b''\end{bmatrix}$}
+
+\item \textbf{Lagrangian primal and dual function}
+
+\mportant{$L(x,\lambda)=c^Tx+\sum\limits_{i=1}^n\lambda_i(A_ix-b_i)$}
+
+\mportant{$d(\lambda)=\max\limits_x\inf\limits_{x\in\text{dom}(f)}(c^+\lambda^TA)x-\lambda^Tb$}
+
+\item \textbf{KKT}
+
+\note{
+\mportable{Primal feasibility&$Ax^\ast-b\leq 0$\\Dual feasibility&$\lambda_i^\ast\geq 0\forall i=1\ldots m$\\Complementary Slackness&$\lambda_i^\ast(A_ix^\ast-b_i)$\\Stationarity Condition&$\nabla_x L(x^\ast,\lambda^\ast)=0=c+A^T\lambda^\ast$}}
+
+\item \textbf{Dual Problem}
+
+\mportant{$\max -\lambda^Tb$\\sb.t. $\lambda\geq0$\\$\lambda^TA=-c^T$}
+
+\textbf{Geometric Interpretation}
+
+\mportable{$t=f(x)$\\$u=g(x)\leq0$\\$\mathcal{G}=\left\{(u,t):t=f(x),\ u=g(x),\ x\in\mathcal{X}\right\}$}
+
+\mportant{\textbf{primal:} $p^\ast\leq min\left\{t:(u,t)\in\mathcal{G},u\leq 0\right\}$}
+
+\mportant{\textbf{dual:} $d(\lambda)=\min\limits_{(u,t)\in\mathcal{G}}(t+\lambda u)$\\$d^\ast=\max\limits_{\lambda\geq 0} d(\lambda)$}
+\end{enumerate}
+
+\mypic{Pictures/Space}
+
+\note{t-axis for $f(x)$, u-axis for $g(x)$ therefore only points with $u<0$ are feasible.}
+
+\subsubsection{The Dual Problem}
+
+Every $\nu\in\mathbb{R}^p,\lambda\geq 0$ produces a lower bound for $p^\ast$. Which is the best?
+
+\mportant{$\max\limits_{\lambda,\nu} d(\lambda,\nu)$\\subj. to $\lambda\geq 0$}
+
+\begin{itemize}
+\ncompaq
+\item Problem (D) is \textbf{convex} even if (P) is not.
+\item Problem (D) has optimal value $d^\ast\leq p^\ast$.
+\item The point $(\lambda,\nu)$ is \textbf{dual feasible} if $\lambda\geq 0$ and $(\lambda,\nu)\in$dom$(d)$.
+\item $(\lambda,\nu)\in$dom$(d$ can often be imposed explicitly in (D).
+\end{itemize}
+
+\subsubsection{Example: Dual of a Linear Program (LP)}
+
+\mportant{$\min\limits_{x\in\mathbb{R}^n}c^Tx$\\subj. to $Ax=b$\\$Cx\leq e$}
+
+\mportable{$d(\lambda,\nu)$&$=\min\limits_{x\in\mathbb{R}^n}\left[c^Tx+\nu^T(Ax-b)+\lambda^T(Cx-e)\right]$\\&$=\min\limits_{x\in\mathbb{R}^n}\left[(A^T\nu+C^T\lambda+c)^Tx-b^T\nu-e^T\lambda\right]$\\&$=\begin{cases}-b^T\nu-e^T\lambda&\text{if }A^T\nu+C^T\lambda+c=0\\-\infty&\text{otherwise}\end{cases}$}
+
+Thus the dual problem is:
+
+\mportant{$\max\limits_{\lambda,\nu}-b^T\nu-e^T\lambda$\\subj. to $A^T\nu+C^T\lambda+c=0$\\$\lambda\geq 0$ dual feasibility}
+
+\important{The dual of an LP is also an LP}
+
+\subsubsection{Example: Norm minimization with equality constraint}
+
+\mportant{$\min\limits_x ||x||_2$\\subj. to $Ax=b$}
+
+The dual function is:
+
+\mportable{$d(\lambda)$&$=\min\limits_x\left[||x||-(A^T\nu)^Tx+b^T\nu\right]$\\&$=\begin{cases}b^T\nu&\text{if }||A^T\nu||_2\leq 1\\-\infty&\text{otherwise}\end{cases}$}
+
+The dual problem is:
+
+\mportant{$\max\limits_\nu b^T\nu$\\subj. to $||A^T\nu||_2\leq 1$}
+
+\textbf{Lower bound:} $b^T\nu\leq p^\ast$ whenever $||A^T\nu||_2\leq 1$
+
+\subsubsection{Example: Dual of a Quadratic Program}
+
+\mportant{$\min\limits_{x\in\mathbb{R}^n}\onha x^TQx+c^Tx$\\subj. to $Cx\leq e$}
+
+with $Q\succ 0$
+
+\finn
+
+The dual function is:
+
+\mportable{$d(\lambda)$&$=\min\limits_{x\in\mathbb{R}^n}\left[\onha x^TQx+c^Tx+\lambda^T(Cx-e)\right]$\\&$=\min\limits_{x\in\mathbb{R}^n}\left[\onha x^TQx+(c+C^T\lambda)^Tx-e^T\lambda\right]$}
+
+The optimal x satisfies: $Qx+c+C^T\lambda=0$
+
+\finn
+
+Substituting $x=-Q^{-1}(c+C^T\lambda)$ into $d(\lambda)$
+
+\mportant{$d(\lambda)=-\onha(c+C^T\lambda)^TQ^{-1}(c+C^T\lambda)-e^T\lambda$}
+
+The \textbf{dual} problem is then: 
+
+\mportant{$\min\limits_\lambda \onha\lambda^TC^TQ^{-1}C\lambda+(CQ^{-1}c+e)^T\lambda+\onha c^TQ^{-1}c$\\subj. to $\lambda\geq 0$}
+
+\important{The dual of a QP is a QP as well!}
+
+\subsubsection{Example: Dual of a Mixed-Integer Linear Problem (MILP)}
+
+\mportant{$\min\limits_{x\in\mathcal{X}}c^Tx$\\subj. to $Ax\leq b$\\$\mathcal{X}={-1,1}^n$}
+
+The dual function is:
+
+\mportable{$d(\lambda)$&$=\min\limits_{x_i\in\{-1,1\}}\left[c^Tx+\lambda^T(Ax-b)\right]$\\&$=-||A^T\lambda+c||_1-b^T\lambda$}
+
+The dual problem is:
+
+\mportant{$\max\limits_\lambda -||A^T\lambda+c||_1-b^T\lambda$\\subj. to $\lambda\geq 0$}
+
+The dual of a mixed-integer LP is an LP (without integers).
+
+\subsection{Weak Duality}
+
+\begin{itemize}
+\ncompaq
+\item It is \textbf{always} true that $d^\ast\leq p^\ast$.
+\item Sometimes the dual is much easier to solve than the primal (or vice-versa).
+\end{itemize}
+
+If $p^\ast\neq d^\ast$ then $p^\ast - d^\ast$ is the \textbf{duality gap}.
+
+\subsection{Strong Duality}
+
+\begin{itemize}
+\ncompaq
+\item It is sometimes true that $d^\ast = p^\ast$.
+\item Strong duality usually holds for convex problems.
+\item Strong duality does not hold for non-convex problems.
+\item Can impose conditions on convex problems to guarantee that $d^\ast =p^\ast$.
+\end{itemize}
+
+\subsubsection{Slater Condition}
+
+\mportant{$\min f(x)$\\subj. to $g_i(x)\leq 0\ i=1,\ldots m$\\$Ax=b\ A\in\mathbb{R}^{p\times n}$}
+
+If there is at least one \textbf{strictly feasible point}, i.e.
+
+\mportant{$\left\{\left.x\right|Ax=b,g_i(x)<0,\ \forall i\in\{1,\ldots,m\}\right\}\neq{\O}$}
+
+\important{Then $p^\ast=d^\ast$}
+
+\subsection{Primal and Dual Solution Properties}
+
+Assume that strong duality holds, with optimal solution $x^\ast$ and $(\lambda^\ast,\nu^\ast)$.
+
+\begin{enumerate}
+\ncompaq
+\item From strong duality: $d^\ast=p^\ast\Rightarrow d(\lambda^\ast,\nu^\ast)=f(x^\ast)$
+\item From the definition of the dual function:
+
+$f(x^\ast)=d(\lambda^\ast,\nu^\ast)=f(x^\ast)+\underbrace{\sum\limits_{i=1}^m\lambda_i^\ast g_i(x^\ast)}_{=0}+\underbrace{\sum\limits_{i=1}^p\nu_i^\ast h_i(x^\ast)}_{=0}$
+\item \textbf{Complementary Slackness}
+
+\mportable{$\lambda_i^\ast=0$ for every $g_i(x^\ast)<0\rightarrow$ \textbf{active constraint}\\$g_i(x^\ast)=0$ for every $\lambda_i^\ast>0$}
+\end{enumerate}
+
+\subsection{Karush-Kuhn-Tucker Conditions}
+
+Assume that all $g_i$ and $h_i$ are differentiable. \textbf{Necessary} conditions for optimality:
+
+\begin{enumerate}
+\ncompaq
+\item Primal Feasibility:
+
+\mportable{$g_i(x^\ast)\leq 0$&$\ i=1,\ldots,m$\\$h_i(x^\ast)=0$&$\ i=1,\ldots,p$}
+\item Dual Feasibility:
+
+\mportant{$\lambda^\ast\geq 0$}
+\item Complementary Slackness:
+
+\mportant{$\lambda^\ast_ig_i(x^\ast)=0\ i=1,\ldots,m$}
+\item Stationarity:
+
+\mportant{$\nabla_xL(x^\ast,\lambda^\ast,\nu^\ast)=\nabla f(x^\ast)+\sum\limits_{i=1}^m\lambda_i^\ast\nabla g_i(x^\ast)+\sum\limits_{i=1}^p\nu_i^\ast\nabla h_i(x^\ast)=0$}
+\end{enumerate}
+
+\finn
+
+\textbf{For a convex optimization problem:}
+
+\begin{enumerate}
+\ncompaq
+\item If $(x^\ast,\lambda^\ast,\nu^\ast)$ satisfy the KKT conditions, then $p^\ast=d^\ast$.
+\begin{itemize}
+\item $p^\ast=f(x^\ast)=L(x^\ast,\lambda^\ast,\nu^\ast)$ (due to complementary slackness.
+\item $d^\ast=g(\lambda^\ast,\nu^\ast)=L(x^\ast,\lambda^\ast,v^\ast)$ (due to convexity of the functions and stationarity)
+\end{itemize}
+\item If the Slater conditions hold, then
+\begin{itemize}
+\item $x^\ast$ is optimal \textbf{If and only if} there exist ($\lambda^\ast,\nu^\ast)$ satisfying the KKT conditions.
+\end{itemize}
+\end{enumerate}
+
+\subsubsection{Example: KKT Conditions for a QP}
+
+\note{Provide a possibility to check whether a point is an optimum.}
+
+\mportant{$\min\limits_{x\in\mathbb{R}^2}\onha x^TQx+c^Tx$\\subj. to $Ax=b$\\$x\geq 0$}
+
+The \textbf{Lagrangian} is $L(x,\lambda,\nu)=\onha x^TQx+c^TxQ\nu^T(Ax-b)-\lambda^Tx$
+
+\finn
+
+\textbf{The KKT conditions are:}
+
+\note{
+\mportabflex{rl}{$\nabla_xL(x,\lambda,\nu)=Qx+A^T\nu-\lambda+c=0$&[stationarity]\\$Ax=b$&[primal feasibility]\\$x\geq 0$&[primal feasibility]\\$\lambda\geq0$&[dual feasibility]\\$x_i\lambda_i=0\quad i=1..n$&[complementarity]}}
+
+The final three conditions can be written as $0\leq x\bot\lambda\geq 0$
+
+\subsection{Sensitivity Analysis}
+
+What effect does changing a constraint have on the optimal solution?
+
+\finn
+
+\textbf{General optimization problem and its dual:}
+
+\sbs{.55}{.45}{\mportant{$\min\limits_x f(x)$\\subj. to $g_i(x)\leq 0\ i=1\ldots m$\\$h_i(x)=0\ i=1\ldots p$}}{\mportant{$\max\limits_{\nu,\lambda} d(\nu\lambda)$\\sb. to $\lambda\geq 0$}}
+
+\finn
+
+\textbf{A perturbed optimization and its dual:}
+
+\sbs{.55}{.45}{\mportant{$\min\limits_x f(x)$\\sb. to $g_i(x)\leq u_i\ i=1\ldots m$\\$h_i(x)=v_i\ i=1\ldots p$}}{\mportant{$\max\limits_{\nu,\lambda}d(\nu,\lambda)-u^T\lambda -v^T\nu$\\subj. to $\lambda\geq 0$}}
+
+where the perturbations are $u_i$ and $v_i$
+
+\finn
+
+Assume \textbf{strong duality} for the unperturbed problem with $(\nu^\ast,\lambda^\ast)$ dual optimal. Weak duality for the perturbed problem then implies
+
+\begin{align*}
+p^\ast(u,v)&\geq d^\ast(\nu^\ast,\lambda^\ast)-u^T\lambda^\ast-v^T\nu^\ast\\
+&=p^\ast(0,0)-u^t\lambda^\ast-v^T\nu^\ast
+\end{align*}
+
+\subsubsection{Global Sensitivity Analysis}
+
+\begin{itemize}
+\item $\lambda_i^\ast$ large and $u_i<0$ $\qquad\Rightarrow p^\ast(u,v)$ increases greatly.
+\item $\lambda_i^\ast$ small and $u_i>0$ $\qquad p^\ast(u,v)$ does not decrease much.
+\item $\left\{\begin{matrix}
+v^\ast\text{ large and positive and }v_i<0\\
+v^\ast\text{ large and negative and }v_i>0
+\end{matrix}\right\}$
+
+$\Rightarrow p^\ast(u,v)$ increases greatly.
+\item $\left\{\begin{matrix}
+v^\ast\text{ small and positive and }v_i>0\\
+v^\ast\text{ small and negative and }v_i<0
+\end{matrix}\right\}$
+$\Rightarrow p^\ast(u,v)$ does not decrease much.
+\end{itemize}
+
+Note that the results are not symmetrical and that we only found a lower bound on $p^\ast(u,v)$.
+
+\subsubsection{Local Sensitivity Analysis}
+
+Assume \textbf{strong duality} for the unperturbed problem with $(\nu^\ast,\lambda^\ast)$ dual optimal. Weak duality for the perturbed problem then implies
+
+\begin{align*}
+p^\ast(u,v)&\geq d^\ast(\nu^\ast,\lambda^\ast)-u^T\lambda^\ast-v^T\nu^\ast\\
+&=p^\ast(0,0)-u^t\lambda^\ast-v^T\nu^\ast
+\end{align*}
+
+If in addition $p^\ast(u,v)$ is differentiable at $(0,0)$ then 
+
+\mportant{$\lambda_i^\ast=-\frac{\partial p^\ast(0,0)}{\partial u_i},\qquad \nu_i^\ast=-\frac{\partial p^\ast(0,0)}{\partial v_i}$}
+
+\begin{itemize}
+\item $\lambda_i^\ast$ is sensitivity of $p^\ast$ relative to $i^{th}$ inequality.
+\item $\nu_i^\ast$ is sensitivity of $p^\ast$ relative to $i^{th}$ equality.
+\end{itemize}
+
+\subsection{Summary on Convex Optimization}
+
+\begin{itemize}
+\item Convex optimization problem:
+\begin{itemize}
+\item Convex cost function ($dom(f)$ also convex)
+\item Convex inequality constraints
+\item Affine equality constraints
+\end{itemize}
+\item Benefit: Local = Global optimality
+\item If the slater condition holds $x^\ast$ is optimal iff $\exists(\lambda^\ast,\nu^\ast)$ satisfying KKT conditions.
+\item The dual problem:
+\begin{itemize}
+\item Is convex even if the primal is not.
+\item Provides a lower bound for the primal problem: $d^\ast\leq p^\ast$ and thus a \textbf{suboptimality condition}.
+\item Provides a certificate of optimality for convex problems via KKT.
+\item Lagrange multipliers provide information about active constraints at the optimal solution and about the sensitivity of the optimal cost. How much will the cost increase if a constraint is tightened?
+\end{itemize}
+\end{itemize}
+
+\section{Constrained Finite Time Optimal Control}
+
+We would like to solve constrained infinite time optimal control, but since there are an infinite number of variables this is not possible. Therefore the problem is reduced to constrained finite time optimal control which results in receding horizon optimal control.
+
+\subsection{Receding Horizon Optimal Control}
+
+DT model:
+
+\mportable{$x(k+1)$&$=Ax(k)+Bu(k)$\\$y(k)$&$=Cx(k)$\\$x(k)\in\mathcal{X},u(k)\in\mathcal{U},\forall k\geq 0$}
+
+The CFTOC writes as:
+
+\note{
+\mportabflex{rl}{$J^\ast_{k\rightarrow k+N|k}(x(k))=$&$\min\limits_{U_{k\rightarrow k+N|k}}l_f(x_{k+N|k})+\sum\limits_{i=0}^{N-1}l(x_{k+i|k},u_{k+i|k})$\\sb.t. &$x_{k+i+1|k}=Ax_{k+i|k}+Bu_{k+i|k},\ i=0\ldots N-1$\\&$x_{k+i|k}\in\mathcal{X},u_{k+i|k}\in\mathcal{U},\ i=0\ldots N-1$\\&$x_{k+N|k}\in\mathcal{X}_f$\\&$x_{k|k} = x(k)$}
+is solved at time $k$ with $U_{k\rightarrow N|k}=\{u_{k|k},\ldots,u_{k+N-1|k}\}$}
+
+\begin{itemize}
+\ncompaq
+\item $x_{i+k|k}$ is the state of the model at time $k+i$, predicted at time $k$ obtained by starting from the current state $x{k|k}=x(k)$ an applying to the system model the input sequence $u_{k|k},\ldots, u_{k+i-1|k}$
+\item Similarly $u_{k+i|k}$ is the input $u$ at time $k+i$ computed at time $k$.
+\item Let $U^\ast_{k\rightarrow k+N|k}=\{u_{k|k}^\ast,\ldots,u_{k+N-1|k}^\ast\}$ be the optimal solution. The first element of $U_{k\rightarrow k+N|k}^\ast$ is applied to the system. Then the CFTOC problem is reformulated and solved at time $k+1$ with the new state $x(k+1)$.
+\end{itemize}
+
+\importname{Receding Horizon Control Law}{$\kappa_k(x(k))=u_{k|k}^\ast(x(k))$}
+
+\mportname{\\ Closed loop system}{$x(k+1)=Ax(k)+B\kappa_k(x(k)):=g_{cl}(x(k)),k\geq 0$}
+
+\textbf{RHC: Time-invariant systems}
+
+System, Constraints and Cost function time invariant!
+
+\mportable{$J^\ast(x(k))=$&$\min\limits_U l_f(x_N)+\sum\limits_{i=0}^{N-1}l(x_i,u_i)$\\sb.t.&$x_{i+1}=Ax_i+Bu_i,\ i=0\ldots N-1$\\&$x_i\in\mathcal{X},\ u_i\in\mathcal{U},\ i=0\ldots N-1$\\&$x_N\in\mathcal{X}_f$\\&$x_0=x(k)$}
+
+where $U=\{u_0\ldots,u_{N-1}\}$
+
+\subsection{Constrained Linear Optimal Control}
+
+\importname{Cost function}{$J(x_0,U)=l_f(x_N)+\sum\limits_{i=0}^{N-1}l(x_i,u_i)$}
+
+\begin{itemize}
+\ncompaq
+\item $U:=\{u_0,\ldots,u_{N-1}\}$
+\item Squared Eulcidean Norm:
+
+$l_f(x_N)=x_N^TPx_N$ and $l(x_i,u_i)=x_i^TQx_i+u_i^TRu_i$
+\item $p=1$ or $p=\infty$: 
+
+$l_f(x_N)=||Px_N||_p$ and $l(x_i,u_i)=||Qx_i||_p+||Ru_i||_p$
+\end{itemize}
+
+\textbf{CFTOC:}
+
+\mportable{$J^\ast(x(k))=$&$\min\limits_U J(x_0,U)$\\sb.t.&$x_{i+1}=Ax_i+Bu_i,\ i=0\ldots N-1$\\&$x_i\in\mathcal{X},\ u_i\in\mathcal{U},\ i=0\ldots N-1$ \\&$x_N\in\mathcal{X}_f$\\&$x_0=x(k)$}
+
+Where $N$ is the time horizon and $\mathcal{X},\ \mathcal{U},\ \mathcal{X}_f$ are polyhedral regions.
+
+\subsubsection{Feasible Set}
+
+Set of inital states $x(0)$ for which the optimal control problem is feasible:
+
+\mportable{$\mathcal{X}_0=$&$\{x_0\in\mathbb{R}^n|\exists(u_0\ldots u_{N-1})$ s.t. $x_i\in\mathcal{X},\ u_i\in\mathcal{U},$\\&$i=0\ldots N-1,\ x_N\in\mathcal{X}_f,$ where $x_{i+1}=Ax_i+Bu_i\}$}
+
+In general $\mathcal{X}_j$ is the set of states $x_j$ at time $j$ for which the control problem is feasible, i.e. for which we can find a trajectory to $\mathcal{X}_f$ within $N$ steps.\textbf{Independent of the cost.}
+
+\subsection{Constrained Optimal Control: Quadratic Cost}
+
+\mportant{$J(x_0,U)=x_N^TPx_N+\sum\limits_{i=0}^{N-1}x_i^TQx_i+u_i^TRu_i$}
+
+\note{with $P\succeq 0,\ Q\succeq 0,\ R\succ 0$}
+
+\finn
+
+\textbf{CFTOC}:
+
+\mportable{$J^\ast(x(k))$&$=\min\limits_UJ(x_0,U)$\\sb.t.&$x_{i+1}=Ax_i+Bu_i,\ i=0\ldots N-1$\\&$x_i\in\mathcal{X},\ u_i\in\mathcal{U},\ i=0\ldots N-1$\\&$x_N\in\mathcal{X}_f$\\&$x_0=x(k)$}
+
+\subsubsection{Construction of the QP with substitution}
+
+\begin{itemize}
+\item Dense matrices, $N$ optimization variables.
+\end{itemize}
+
+\begin{enumerate}
+\ncompaq
+\item Rewrite the cost as
+
+\mportable{$J(x(k),U)$&$=U^THU+2x(k)^TFU+x(k)^TYx(k)$\\&$=\begin{bmatrix}U^T&x(k)^T\end{bmatrix}\begin{brsm}H&F^T\\F&Y\end{brsm}\begin{bmatrix}U^T&x(k)^T\end{bmatrix}^T$}
+\item Rewrite the constraints compactly as
+
+\note{
+\mportant{$\mathcal{X}=\{x|A_x x\leq b_x\}\quad \mathcal{U}=\{u|A_uu\leq b_u\}\quad \mathcal{X}_f=\{x|A_fx\leq b_f\}$}}
+
+\mportant{$GU\leq w+Ex(k)$}
+
+\mypic{Pictures/GEF}
+\item Rewrite the constrained optimal control problem as
+\mportable{$J^\ast(x(k))$&$=\min\limits_U \begin{bmatrix}U^T&x(k)^T\end{bmatrix}\begin{brsm}H&F^T\\F&Y\end{brsm}\begin{bmatrix}U^T&x(k)^T\end{bmatrix}^T$\\sb.t.&$ GU\leq w+Ex(k)$}
+
+Then we can find a solution for every $k$ which results in a piecewise affine solution.
+\end{enumerate}
+
+\paragraph{Quadratic Cost State Feedback Solution}
+
+Multiparametric quadratic program (mp-QP) with the following solution properties:
+
+\begin{itemize}
+\item First component of the solution has the form
+
+\mportant{$u^\ast_0 = \kappa(x(k)),\ \forall x(k)\in\mathcal{X}_0$}
+
+$\kappa:\mathbb{R}^n\rightarrow\mathbb{R}^m$ is continuous and piecewise affine on polyhedra.
+
+\mportant{$\kappa(x)=F^jx+g^j$ if $x\in CR^j, j= 1,\ldots, N^r$}
+\item The polyhedral sets $CR^j=\{x\in\mathbb{R}^n|H^j x\leq K^j\},j=1,\ldots,N^r$ are a partition of the feasible polyhedron $\mathcal{X}_0$.
+\item The value function $J^\ast(x(k))$ is convex and piecewise quadratic on polyhedra.
+\item The central polyhedron represents unconstrained control and thus the LQR solution.
+\end{itemize}
+
+\subsubsection{Construction of the QP without substitution}
+
+\begin{itemize}
+\item Sparse matrices, $2N$ variables.
+\end{itemize}
+
+Idea: Keep state equations as equality constraints (often more efficient)
+
+\finn
+
+\textbf{Resulting QP problem:}
+
+\mportable{$J^\ast(x(k))$&$=\min\limits_z \begin{bmatrix}z^T&x(k)^T\end{bmatrix}\begin{brsm}\bar{H}&0\\0&Q\end{brsm}\begin{bmatrix}z^T&x(k)^T\end{bmatrix}^T$\\sb.t.&$G_{in}z\leq w_{in}+E_{in}x(k)$\\&$G_{eq}z=E_{eq}x(k)$}
+
+where $z=\begin{bmatrix}x_1^T&\cdots&x_N^T&u_0^T&\cdots&u_{N-1}^T\end{bmatrix}^T$
+
+\finn
+
+\textbf{Equalities from System dynamics: $x_{i+1}=Ax_i+Bu_i$}
+
+\mypic{Pictures/GEQ}
+
+\textbf{Inequalities: $G_{in}z\leq w_{in}+E_{in}x(k)$}
+
+\note{
+\mportant{$\mathcal{X}=\{x|A_x x\leq b_x\}\quad \mathcal{U}=\{u|A_uu\leq b_u\}\quad \mathcal{X}_f=\{x|A_fx\leq b_f\}$}}
+
+\mypic{Pictures/INEQ}
+
+\textbf{Cost function from MPC $x_N^TPx_N+\sum\limits_{i=0}^{N-1}x_i^TQx_i+u_i^TRu_i$}
+
+\mypic{Pictures/MPCCost}
+
+\subsection{Constrained Optimal Control: 1-Norm and $\infty$-Norm}
+
+\mportant{$J(x_0,U):=||PX_N||_p+\sum\limits_{i=0}^{N-1}||Qx_i||_p+||Ru_i||_p$}
+
+with $p=1$ oder $p=\infty$, P, Q, R full rank column matrices
+
+\textbf{CFTOC:}
+
+\mportable{$J^\ast(x(k))$&$=\min\limits_U J(x_0,U)$\\sb.t.&$x_{i+1}=Ax_i+Bu_i,i=0\ldots N-1$\\&$x_i\in\mathcal{X},\ u_i\in\mathcal{U},\ i=0\ldots N-1$\\&$x_N\in\mathcal{X}_f$\\&$x_o=x(k)$}
+
+%\subsubsection{Piecewise Affine Minimization}
+%
+%\mportant{$\min\limits_x\left[\max\limits_{i=1\ldots m}\{c_i^Tx+d_i\}\right]$\\sb.t. $Gx\leq h$}
+%
+%is equivalent to an LP:
+%
+%\mportant{$\min\limits_{x,t} t$\\sb.t. $c_i^Tx+d_i\leq t\ i=1\ldots m$\\$Gx\leq h$}
+%
+%\note{The trick was to write the problem in epigraph form - adding new variables.}
+
+\subsubsection{$l_\infty$ (Chebyshev) minimization}
+
+\mportant{$\min\limits_{x\in\mathbb{R}^n}||x||_\infty$\\sb.t. $Fx\leq g$}
+
+Write this a max of linear functions:
+
+\mportant{$\min\limits_{x\in\mathbb{R}^n }[\max\{x_1,\ldots,x_n,-x_1,\ldots,-x_n\}]$\\sb.t. $Fx\leq g$}
+
+which is equivalent to:
+
+\mportable{$\min\limits_{x,t} t$&\\sb.t. &$x_i\leq t\ i=1\ldots n$\\&$-x_i\leq t\ i=1\ldots n$\\&$Fx\leq g$}
+
+which is equivalent to:
+
+\mportable{$\min\limits_{x,t}$&\\sb.t. &$-\mathbf{1}t\leq x\leq \mathbf{1}t$\\&$Fx\leq g$}
+
+where $\mathbf{1}$ is a vector of ones.
+
+\subsubsection{$l_1$ minimization}
+
+\textbf{Constrained $l_1$ minimization}
+
+\mportant{$\min\limits_{x\in\mathbb{R}^n}||x||_1$\\sb.t. $Fx\leq g$}
+
+Write this as a max of linear functions:
+
+\mportant{$\min\limits_{x\in\mathbb{R}^n}\left[\sum\limits_{i=1}^m\max\{x_i,-x_i\}\right]$\\sb.t. $Fx\leq g$}
+
+which is equivalent to:
+
+\mportabflex{rl}{$\min\limits_{x\in\mathbb{R}^n,t\in\mathbb{R}^m}t_1+\cdots+t_m$&\\sb.t. $x_i$&$\leq t_i\ i=1\ldots m$\\$-x_i$&$\leq t_i\ i=1\ldots m$\\$Fx$&$\leq g$}
+
+which is equivalent to:
+
+\mportant{$\min\limits_{x\in\mathbb{R}^n,t\in\mathbb{R}^m}\mathbf{1}^Tt$\\sb.t. $-t\leq x\leq t$\\$Fx\leq g$}
+
+\subsubsection{Construction of the LP for $l_\infty$}
+
+Following the procedure above the original problem can be written as:
+
+\small
+\mportabflex{ll}{
+$\min\limits_z$&$\epsilon_0^x+\cdots+\epsilon_N^x+\epsilon_0^u+\cdots+\epsilon_{N-1}^u$\\
+subj. to&$-\vec{1}_n\epsilon_i^x\leq Q\pm\left[A^ix_0+\sum\limits_{j=0}^{i-1}A^jBu_{i-1-j}\right]$\\
+&$-\vec{1}_r\leq \pm P\left[A^N x_0+\sum\limits_{j=0}^{N-1}A^j Bu_{N-1-j}\right]$\\
+&$\vec{1}_m\epsilon_i^u\leq \pm R u_i$\\
+&$A^ix_0+\sum\limits_{j=0}^{i-1}A^jBu_{i-1-j}\in\mathcal{X},\ u_i\in\mathcal{U}$\\
+&$A^Nx_0+\sum\limits_{j=0}^{N-1}A^jBu_{N-1-j}\in\mathcal{X}_f$\\
+&$x_0=x(k),\ i=0,\ldots,N-1$
+}
+\normalsize
+
+which in standard LP form can be written as
+
+\mportabflex{ll}{
+$\min\limits_z$&$c^Tz$\\
+subj. to&$\bar{G}z\leq\bar{w}+\bar{S}x(k)$
+}
+
+where $z:=\{\epsilon_0^x,\ldots,\epsilon_N^x,\epsilon_0^u,\ldots,\epsilon_{N-1}^u,u_0^T,\ldots,u_{N-1}^T\}\in\mathbb{R}^s$ and $s=(m+1)N+N+1$
+
+as well as
+
+\mportant{$\bar{G}=\begin{bmatrix}
+G_\epsilon&0\\0&G
+\end{bmatrix},\bar{S}=\begin{bmatrix}
+S_\epsilon\\S
+\end{bmatrix},\bar{w}=\begin{bmatrix}
+w_\epsilon\\w
+\end{bmatrix}$}
+
+\paragraph{$1-/\infty-$Norm State Feedback Solution} Multiparametric linear program (mp-LP) and exhibits the same basic properties as the quadratic cost state feedback solution. The following distinctions have to be made:
+
+\begin{itemize}
+\item Quadratic cost solution is either:
+\begin{itemize}
+\item unique and in the interior of feasible set $\rightarrow$ no constraints active
+\item unique and on the boundary of feasible set $\rightarrow$ at least 1 active constraint
+\end{itemize}
+\item Linear cost solution is either:
+\begin{itemize}
+\item unbounded
+\item unique at a vertex of feasible set $\rightarrow$ at least $n$ active constraints
+\item a set of multiple optima $\rightarrow$ at least 1 active constraint
+\end{itemize}
+\end{itemize}
+
+\section{Invariance}
+
+\begin{define}
+Let $A$ and $B$ be subsets of $\mathbb{R}^n$. The \textbf{Minkowski Sum} is:
+
+\mportant{$A\oplus B:=\{x+y|x\in A,y\in B\}$}
+\end{define}
+
+\begin{define}
+Let $A$ and $B$ be subsets of $\mathbb{R}^n$. The \textbf{Pontryagin Difference} is:
+
+\mportant{$A\ominus B:=\{x|x+e\in A\forall e\in B\}$}
+\end{define}
+
+\subsection{Objectives of Constrained Control}
+
+\begin{enumerate}
+\item Constraint satisfaction
+\item Stability
+\item Optimal performance
+\item Maximize the set $\{x(0)|$ Conditions 1-3 are met$\}$
+\end{enumerate}
+
+\subsection{Limitations of Linear Controlers}
+
+\mportant{$x(k+1)=\begin{brsm}1&1\\0&1\end{brsm}x(k)+\begin{brsm}1\\0.5\end{brsm}u(k)$}
+
+\textcolor{blue}{$\mathcal{X}:=\{x|\ ||x||_\infty\leq 5\}$}
+
+\finn
+
+\textcolor{red}{$\mathcal{U}:=\{u|\ ||u||_\infty\leq 1\}$}
+
+\mypic{Pictures/Limitations}
+
+\textbf{Controlled Invariance:}
+
+Will there always exist a valid input that will maintain constraints?
+
+\subsection{Invariance}
+
+\importname{\\Positive Invariant Set}{$x(k)\in\mathcal{O}\Rightarrow x(k+1)\in\mathcal{O},\ \forall\ k\in\{0,1,\ldots\}$}
+
+\note{If the invariant set is within the constraints, it provides a set of initial states from which the trajectory will never violate the system constraints.}
+
+\importname{Maximal Positive Invariant Set}{$\mathcal{O}_\infty\subset\mathcal{X}$}
+
+\note{if $0\in\mathcal{O}_\infty$, $\mathcal{O}_\infty$ is invariant and contains all invariant sets that contain the origin.}
+
+\textbf{Pre Set:} Given a set S and the dynamic system $x(k+1)=g(x(k))$, the pre set S is the set of states that evolve into the target set S in one time step.
+
+\mportant{pre(s)$:=\{x|g(x)\in S\}$}
+
+\textbf{Invariant Set Conditions:} A set $\mathcal{O}$ is a positive invariant set if and only if:
+
+\mportant{$\mathcal{O}\subseteq$pre($\mathcal{O}$)}
+
+\subsubsection{Computing Invariant Sets}
+
+\mypic{Pictures/InvariantComputation}
+
+\subsection{Controlled Invariance}
+
+\textbf{Control Invariant Set:} A set $\mathcal{C}\subseteq\mathcal{X}$ is said to be control invariant if:
+
+\mportant{$x(k)\in\mathcal{C}\Rightarrow \exists u(k)\in\mathcal{U}$ s.t. $g(x(k),u(k))\in\mathcal{C}\ \forall\ k\in\mathbb{N}^+$}
+
+\textbf{Maximum Control Invariant Set $\mathcal{C}_\infty$:}
+
+The set $\mathcal{C}_\infty$ is control invariant and contains all control invariant sets contained in $\mathcal{X}$.
+
+\importname{Pre-Set}{pre(S)$:=\{x|\exists u\in\mathcal{U}$ s.t. $g(x,u)\in$ S$\}$}
+
+\subsubsection{Pre-Set Computation: Controlled System}
+
+\mportant{$x(k+1)=Ax(k)+Bu(k)$\\$u(k)\in\mathcal{U}:=\{u|Gu\leq g\}$\\$S:=\{x|Fx\leq f\}$}
+
+\mportable{pre(S)&$\{x|\exists u\in\mathcal{U},\ Ax+Bu\in$S$
+\}$\\&$\{x|\exists u\in\mathcal{U},\ FAx+FBu\leq f \}$\\&$\left.\left\{x\right|\exists u,\begin{bmatrix}FA&FB\\0&G\end{bmatrix}\begin{bmatrix}x\\u\end{bmatrix}\leq\begin{bmatrix}f\\g\end{bmatrix}\right\}$}
+
+see pages 44-52, lecture 5 for an example.
+
+\subsubsection{Control Law Synthesis}
+
+A valid control law $\kappa(x(k))$ will ensure that a system $x(k+1) = g(x(k),u(k))$ always stays in the control invariant set:
+
+\mportant{$g(x,\kappa(x))\in \mathcal{C}\ \forall\ x\in \mathcal{C}$}
+
+This fact can be used to synthesize a controller:
+
+\important{$\kappa(x):=\text{argmin}\{f(x,u)|g(x,u)\in C\}$}
+
+where $f$ is any function (including $f(x,u)=0)$). This does not ensure convergence but will satisfy the constraints.
+
+\subsection{Practical Computation of Invariant Sets}
+
+\importname{Ellipsoid}{$E:=\{x|(x-x_c)^TP(x-x_c)\leq 1\}$}
+
+\textbf{Lemma:} If $V:\mathbb{R}^n\rightarrow\mathbb{R}$ is a Lyapunov function for the system $x(k+1)=g(x(k))$ then
+
+\mportant{$Y:=\{x|V(x)\leq\alpha\}$}
+
+is an invariant set for all $\alpha\geq 0$, since it is a sublevel set of a Lyapunov function.
+
+\subsubsection{Example}
+
+\mportant{$A^TPA-P\succ 0$}
+
+where $V(x)=x(k)^TPx(k)$ is a Lyapunov function.
+
+\vspace{3ex}
+
+Now we want to find the largest $\alpha$ s.t. the invariant set $Y_\alpha$ is contained within the system constraints $\mathcal{X}$:
+
+\mportant{$Y_\alpha:=\{x|x^TPx\leq\alpha\}\subset\mathcal{X}:=\{x\|Fx\leq f\}$}
+
+This is equivalent to the problem:
+
+\mportant{$\max\limits_\alpha\alpha$\\sb.t. $h_{Y_\alpha}(F_i)\leq f_i\ \forall\ i\in\{1,\ldots, n\}$}
+
+Support of an ellipse:
+
+\mportant{$h_{Y_\alpha}=\max\limits_x\gamma^Tx$\\sb.t. $x^TPx\leq\alpha$}
+
+As long as $h_{Y_\alpha}<f_i$ the ellipse \textbf{does not violate the constraint}. The support identifies the point closest to the constraint relying on the scalar product, that effectively projects a certain point within the ellipse onto the direction of the constraint, thus returning a maximum for the point reaching towards the constraint the most.
+
+\begin{center}
+\graphicspath{{Pictures/}}
+\def\svgwidth{0.8\linewidth}
+\input{Pictures/SupportEllipse.pdf_tex}
+\end{center}
+
+Change of variables: $y:=P^{\onha}x$
+
+\mportant{$h_{Y_\alpha}(\gamma)=\max\limits_y\gamma^TP^{-\onha}y$\\sb.t. $y^Ty\leq\sqrt{\alpha^2}$}
+
+which can be solved by inspection:
+
+\mportant{$h_{Y_\alpha}=\gamma^TP^{-\onha}\frac{P^{-\onha}\gamma}{||P^{-\onha}\gamma||}\sqrt{\alpha}=||P^{-\onha}\gamma||\sqrt{\alpha}$}
+
+The solution follows as:
+
+\begin{align*}
+\alpha^\ast&=\max\limits_{\alpha}\alpha\text{ s.t. }||P^{-1/2}F_iT||^2\alpha\leq f_i^2\ \forall i\in\{1,\ldots,n\} \\
+&= \min\limits_{i\in\{1,\ldots,n\}}\frac{f_i^2}{F_iP^{-1}F_i^T}
+\end{align*}
+
+\subsection{Summary Invariant Sets}
+
+\begin{itemize}
+\item Core component of MPC problem.
+\item Special case: Linear System/Polyhedral Constraints
+\begin{itemize}
+\item Polyhedral invariant set
+\begin{itemize}
+\item Can represent the maximum invariant set
+\item Can be complex (many inequalities) for more than $\sim$ 5 - 10 states
+\item Resulting MPC optimization will be a quadratic program
+\end{itemize}
+\item Ellipsoidal invariant set
+\begin{itemize}
+\item Smaller than polyhedral set (not maximum invariant set)
+\item Easy to compute for large dimensions
+\item Fixed complexity
+\item Resulting MPC optimization will be quadratically constrained quadratic program
+\end{itemize}
+\end{itemize}
+\end{itemize}
+
+\section{Terminal Cost, Constraint and Controller}
+
+\mypic{Pictures/FeasibilityAndStability}
+
+\dahe Introduce terminal cost and constraints to explicitly ensure feasibility and stability!
+$l_f()$ and $\mathcal{X}_f$ are chosen to mimic an infinite horizon.
+
+\mportable{$J^\ast(x_k)=$&$\min\limits_{U}\textcolor{red}{l_f(x_N)}+\sum\limits_{i=0}^{\textcolor{red}{N-1}}l(x_i,u_i)$\\sb.t.&$x_{i+1}=Ax_i+Bu_i,\ i=0\ldots N-1$\\&$x_i\in\mathcal{X},\ u_i\in\mathcal{U},\ i=0\ldots N-1$\\&$\textcolor{red}{x_N\in\mathcal{X}_f}$\\&$x_0=x(k)$}
+
+\begin{itemize}
+\ncompaq
+\item \textbf{Infinite-Horizon}
+
+Solution of the RHC problem with $N=\infty$ \dahe open loop trajectories are the same as closed loop trajectories.
+\begin{itemize}
+\ncompaq
+\item Problem feasible \dahe closed loop trajectories will always be feasible.
+\item Cost finite \dahe states and inputs will converge to origin.
+\end{itemize}
+\item \textbf{Finite-Horizon}
+
+RHC is \glqq short-sighted\grqq strategy approximating $N=\infty$-controller but:
+\begin{itemize}
+\ncompaq
+\item \textbf{Feasibility}: After some steps the problem might become infeasible even without disturbance and modelling uncertainty.
+\item \textbf{Stability}: The generated control inputs may not lead to convergent trajectories.
+\end{itemize}
+\end{itemize}
+
+\subsection{Proof of Feasibility and Stability}
+
+\begin{enumerate}
+\ncompaq
+\item Prove recursive feasibility by showing the existence of a feasible control sequence at all time instants when starting from a feasible initial point.
+\item Prove stability by showing that the optimal cost function is a Lyapunov function.
+\end{enumerate}
+
+There are two possible cases:
+\begin{enumerate}
+\ncompaq
+\item Terminal constraint at zero: $x_N=0$
+\item Terminal constraint in some (convex) set: $x_N\in\mathcal{X}_f$
+\end{enumerate}
+
+\subsubsection{Proof of $x_N\in\mathcal{X}_f=0$}
+
+\textbf{First:}
+\begin{itemize}
+\ncompaq
+\item Assume feasibility of $x(k)$ and let $\{u_{0|k}^\ast,\ldots,u_{N-1|k}^\ast\}$ be the optimal control sequence and $\{x(k),x_{1|k}^\ast,\ldots,x_{N|k}^\ast\}$ the corresponding trajectory.
+\item Apply $u_{0|k}^\ast$ and let the system evolve to\\$x(k+1)=Ax(k)+Bu_{0|k}^\ast$
+\item At $x(k+1)=x_{1|k}^\ast$ the shifted control sequence \mbox{$\tilde{U}=\{u_{1|k}^\ast,\ldots,u_{N-1|k}^\ast, 0\}$} is feasible (apply 0 control input $\Rightarrow x_{N+1}=0$.
+\end{itemize}
+
+\textbf{Second:}
+\begin{itemize}[leftmargin=*]
+\ncompaq
+\item Show $J^\ast(x(k+1))<J^\ast(x(k))\ \forall\ x(k)\neq 0$
+\item $J^\ast(x(k))=\underbrace{l_f(x_{N|k}^\ast)}_{=0}+\sum\limits_{i=0}^{N-1}l(x_{i|k}^\ast,u_{i|k}^\ast$\\
+\item $J^\ast(x(k+1)\leq \tilde{J}(x(k+1))=\sum\limits_{i=1}^Nl(x_i,\tilde{u}_i)$
+
+\begin{tabular}{rl}
+\small
+$\sum\limits_{i=1}^Nl(x_i,\tilde{u}_i)=$&$\sum\limits_{i=0}^{N-1}l(x_{i|k}^\ast,u_{i|k}^\ast)-l(x_{0|k}^\ast,u_{0|k}^\ast)+l(x_N+u_N)$\normalsize\\
+&$J^\ast(x(k))-\underbrace{l(x(k),u_{0|k}^\ast)}_{\text{stagecost \@ k}}+\underbrace{l(0,0)}_{\text{final cost = 0}}$
+\end{tabular}
+\end{itemize}
+
+Thus $J^\ast(x)$ is a Lyapunov function \dahe Stability
+
+\mypic{Pictures/SecondProof1}
+
+\mypic{Pictures/SecondProof2}
+
+\subsection{Stability of MPC - Main Result}
+
+Assumptions:
+
+\begin{enumerate}
+\ncompaq
+\item Stage cost positive definite.
+\item Terminal set is invariant under the local control law $\kappa_f(x_i)$:
+
+\mportant{$x_{i+1}Ax_i+B\kappa_f(x_i)\in\mathcal{X}_f\ \forall\ x_i\in\mathcal{X}_f$}
+
+All state and input constraints are satisfied in $\mathcal{X}_f$
+
+\mportant{$\mathcal{X}_f\subseteq \mathcal{X},\ \kappa_f(x_i)\in\mathcal{U},\ \forall\ x_i\in\mathcal{X}_f$}
+\item Terminal cost is a continuous \textbf{Lyapunov function} in the terminal set $\mathcal{X}_f$
+
+\mportant{$l_f(x_{i+1}-l_f(x_i)\leq -l(x_i,\kappa_f(x_i)),\ \forall\ x_i\in\mathcal{X}_f$}
+\end{enumerate}
+
+Under those 3 assumptions:
+
+\textbf{Theorem:} The closed-loop system under the MPC control law $u_0^\ast(x)$ is asymptotically stable and the set $\mathcal{X}_f$ is positive invariant for the system.
+
+\subsection{Choice of terminal Sets and Cost - QP}
+
+\begin{itemize}
+\item $\mathcal{X}_f=0$ simplest choice but small region of attraction for small $N$
+\item \importname{\\Unconstrained LQR Control Law}{$F_\infty=-(B^TP_\infty B+R)^{-1}B^TP_\infty A$}
+
+where $P_\infty$ is the solution to ARE
+
+\item Terminal weight $P=P_\infty$
+
+\item $\mathcal{X}_f$ \dahe maximum invariant set for closed-loop:
+
+\mportant{$x_{k+1}=Ax_k+BF_\infty(x_k)\in\mathcal{X}_f\forall x_k\in\mathcal{X}_f$}
+
+\item Choose $\mathcal{X}_f$ such that it is the maximum invariant set for the closed loop system.
+
+\mportant{$x_{k+1}=Ax_k+BF_\infty x_k\in\mathcal{X}_f,\ \forall\ x_k\in\mathcal{X}_f$}
+
+\end{itemize}
+
+Then:
+
+\begin{enumerate}
+\ncompaq
+\item The stage cost is a positive definite function.
+\item The terminal set is invariant under the local control law by construction:
+
+\mportant{$\kappa_f(x) = F_\infty x$}
+\item The terminal cost is a continuous Lyapunov function in the terminal set $\mathcal{X}_f$ and satisfies the energy decrease condition.
+\end{enumerate}
+
+Thus all the Assumptions of the Feasibility and Stability Theorem are verified.
+
+\subsection{Summary}
+
+\begin{itemize}
+\ncompaq
+\item Finite-horizon MPC may be not stable!
+\item Finite-horizon MPC may not satisfy constraints for all time!
+\item An infinite-horizon provides stability and invariance.
+\item We fake infinite-horizon by forcing the final state to be in an invariant set for which there exists an invariance-inducing controller, whose infite-horizon cost can be expressed in closed form.
+\item These ideas extend to non-linear systems, but the sets are difficult to compute.
+\end{itemize}
+
+\section{Practical Issues}
+
+\subsection{Reference Tracking}
+
+\mportable{$x(k+1)$&$=Ax(k)+Bu(k)$\\$y(k)$&$=Cx(k)$}
+
+\note{where $x\in\mathbb{R}^{n_x},\ u\in\mathbb{R}^{n_u},\ y\in\mathbb{R}^{n_y}$
+
+$\mathcal{X}=\{x|H_xx\leq k_x\},\ \mathcal{U}=\{x|H_uu\leq k_u\}$
+}
+
+\finn
+
+Goal: Track given reference r such that $y(k)\rightarrow r $ as $k\rightarrow \infty$
+
+How to change the general MPC problem to achieve tracking?
+
+\mportable{$U^\ast(x(k)):=\argmin\limits_{U_k}$&$l_f(x_N)+\sum\limits_{i=0}^{N-1}l(x_{k+i},u_{k+i})$\\sb.t.&$x_k=x(k)$\\&$x_{k+i+1}=Ax_{k+i}+Bu_{k+i}$\\&$x_{k+i}\in\mathcal{X}$\\&$u_{k+i}\in\mathcal{U}$\\&$U_k=\{u_k,u_{k+1},\ldots ,u_{k+N-1}\}$}
+
+$\Rightarrow$ Target condition, which is a steady state:
+
+\mportant{$\min u_s^TR_su_s$\\sb.t. $\begin{bmatrix}I-A&-B\\C&0\end{bmatrix}\begin{bmatrix}x_s\\u_s\end{bmatrix}=\begin{bmatrix}0\\r\end{bmatrix}$\\$x_s\in\mathcal{X},\ u_s\in\mathcal{U}$}
+
+\note{where $x_s$ and $u_s$ represent the desired steady-state condition.}
+
+\finn
+
+If no solution exists compute reachable set point that is closest to r:
+
+\mportant{$\min (Cx_s-r)^TQ_s(Cx_s-r)$\\sb.t. $x_s=Ax_s+Bu_s$\\$x_s\in\mathcal{X},\ u_s\in\mathcal{U}$}
+
+The new MPC is then designed as follows:
+
+\mportant{$\min\limits_U ||y_N-Cx_s||_{P_y}^2+\sum\limits_{i=0}^{N-1}||y_i-Cx_s||_{Q_y}^2+||u_i-u_s||_R^2$\\sb.t. same constraints}
+
+Then the difference between $x$ and $x_s$ is defined as $\Delta x$ and analogous for all other, such that we end up with:
+
+\mportable{$\min$&$\sum\limits_{i=0}^{N-1}\Delta x_i^TQ\Delta x_i+\Delta u_i^TR\Delta u_i+V_f(\Delta x_n)$\\sb.t.$\Delta x_0$&$=\Delta x(k)$\\$\Delta x_{i+1}$&$=A\Delta x_i+B\Delta u_i$\\$H_x\Delta x_i$&$\leq k_x-H_xx_s$\\$Hu\Delta u_i$&$\leq k_u-H_uu_s$\\$\Delta x_N$&$\in\mathcal{X}_f$}
+
+\textbf{Convergence}
+
+\finn
+
+Assume feasibility in $x_s\in\mathcal{X},\ u_s\in\mathcal{U}$ and choose terminal weight $V_f(x)$ and constraint $\mathcal{X}_f$ satisfying:
+
+\begin{itemize}
+\ncompaq
+\item $\mathcal{X}_f\subset\mathcal{X},\ Kx\in\mathcal{U}\ \forall\ x\in\mathcal{X}_f$
+\item $V_f(x^+)-V_f(x)\leq -l(x,Kx)\ \forall\ x\in\mathcal{X}_f$
+\end{itemize}
+
+If in addition the target reference is such that
+
+\mportant{$x_s\bigoplus\mathcal{X}_f\subset\mathcal{X},\ K\Delta x+u_s\in\mathcal{U}\ \forall\ \Delta x\in\mathcal{X}_f$}
+
+then the closed-loop system convergex to the target reference.
+
+\subsection{Scaling the terminal Set}
+
+For tracking, if chosing $x_s\neq 0$ the terminal set has to be shifted with $x_s$. A large terminal set may only allow for a small set of feasible target since if it is moved to much its extreme states become infeasible. For that reason the moving terminal set is scaled down when getting close to state constraints.
+
+\mypic{Pictures/TerminalSetScaled}
+
+\subsubsection{Augmented Model}
+
+\mportable{$x_{k+1}$&$=Ax_k+Bu_k+B_dd_k$\\$d_k+1$&$=d_k$\\$y_k$&$=Cx_k+C_dd_k$}
+
+The augmented system is observable \textbf{iff} $(A,C)$ is observable and
+
+\mportname{has full column rank}{$\begin{bmatrix}A-I&B_d\\C&C_d\end{bmatrix}$}
+
+$\Rightarrow$ Maximal dimension of the disturbance: $n_d\leq n_y$
+
+\finn
+
+\textbf{State observer for augmented model}
+
+\finn
+
+\mportant{$\begin{bmatrix}\hat{x}(k+1)\\ \hat{d}(k+1)\end{bmatrix} = \begin{bmatrix}A&B_d\\0&I\end{bmatrix}\begin{bmatrix}\hat{x}(k)\\ \hat{d}(k)\end{bmatrix}+\begin{bmatrix}B\\0\end{bmatrix}u(k)+\begin{bmatrix}L_x\\L_d\end{bmatrix}(-y_m(k)+C\hat{x}(k)+C_d\hat{d}(k))$}
+
+\note{where $\hat{x},\hat{d}$ are estimates of the state.}
+
+\finn
+
+\textbf{Error dynamics:}
+
+\note{\mportant{$\begin{bmatrix}x(k+1-\hat{x}(k+1)\\d(k+1)-\hat{d}(k+1)\end{bmatrix}=\left(\begin{bmatrix}A&B_d\\0&I\end{bmatrix}+\begin{bmatrix}L_x\\L_d\end{bmatrix}\begin{bmatrix}C&C_d\end{bmatrix}\right)\begin{bmatrix}x(k)-\hat{x}(k)\\d(k)-\hat{d}(k)\end{bmatrix}$}}
+
+$\Rightarrow$ Choose $L=\begin{bmatrix}L_x\\L_d\end{bmatrix}$ s.t. the error dynamics are stable and converge to zero.
+
+\subsection{Offset-free Tracking}
+
+Suppose the observer is stable and the number of outputs $n_y$ equals the dimension of the constant disturbance $n_d$. The observer state satisfies:
+
+\mportant{$\begin{bmatrix}A-I&B\\C&0\end{bmatrix}\begin{bmatrix}\hat{x}_\infty\\ u_\infty\end{bmatrix}=\begin{bmatrix}-B_d\hat{d}_\infty\\y_{m,\infty}-C_d\hat{d}_\infty\end{bmatrix}$}
+
+where $y_{m,\infty}$ and $u_\infty$ are the steady state measured outputs and inputs.
+
+$\Rightarrow$ Observer output $C\hat{x}_\infty+C_d\hat{d}_\infty$ tracks the measurement $y_{m,\infty}$ without offset.
+
+\finn
+
+\textbf{This leads to a new condition at steady-state:}
+
+\mportable{$x_s$&$=Ax_s+Bu_s+B_d\hat{d}_\infty$\\$y_s$&$=Cx_s+C_d\hat{d}_\infty=r$}
+
+Thus we adapt the target condition according to the disturbance:
+
+\mportant{$\begin{bmatrix}A-I&B\\C&0\end{bmatrix}\begin{bmatrix}x_s\\u_s\end{bmatrix}=\begin{bmatrix}-B_d\hat{d}\\ r-C_d\hat{d}\end{bmatrix}$}
+
+\textbf{In practice:}
+
+\begin{enumerate}
+\ncompaq
+\item Estimate state and disturbance, $\hat{x},\hat{d}$
+\item Obtain $(x_s,u_s)$ from steady state target problem using disturbance estimate.
+\item Solve MPC problem for tracking using disturbance estimate $\hat{d}$:
+\end{enumerate}
+
+\mypic{Pictures/MPCForTracking}
+
+\textbf{Main result:}
+
+\finn
+
+\begin{itemize}
+\ncompaq
+\item \mportant{$\kappa(\hat{x}(k),\hat{d}(k),r(k))=u_0^\ast$}
+\item $n_d=n_y$
+\item RHC recursively feasible and unconstrained for $k\geq j$ with $j\in\mathbb{N}^+$.
+\item Closed-loop system:
+\mportable{$x(k+1)$&$=f(x(k),\kappa(\hat{x},\hat{d},r)$\\$\hat{x}(k+1)$&$=(A+L_xC)\hat{x}+(B_d+L_xC_d)\hat{d}$\\&$+B\kappa(\hat{x},\hat{d},r)-L_xy_m(k)$\\$\hat{d}(k+1)$&$=L_dC\hat{x}(k)+(i+L_dC_d)\hat{d}(k)-L_dy_m(k)$}
+converges, i.e. $\hat{x}\rightarrow\hat{x}_\infty, \hat{d}\rightarrow\hat{d}_\infty,y_m\rightarrow y_{m,\infty}$
+\end{itemize}
+
+\mportant{Then $y_m(k)\rightarrow r$ as $k\rightarrow\infty$}
+
+\subsection{Enlarging the Feasible Set}
+
+The introduction of a terminal set reduces the feasible set. \dahe MPC \textbf{without terminal constraint}, with guaranteed stability.
+
+\finn
+
+Possible if:
+\begin{itemize}
+\ncompaq
+\item initial state lies in sufficiently small subset of feasible set.
+\item N is sufficiently large.
+\end{itemize}
+
+such that the terminal state satisfies the terminal constraint without enforcing it in the optimization. Thus the solution of the finite horizon MPC problem corresponds to the infinite horizon solution.
+
+\finn
+
+\textbf{Advantage}: Controller defined in larger feasible set.
+\textbf{Disadvantage}: Characterization of region of attraction or specification of required horizon length extremly difficult.
+
+\finn
+
+\note{With larger horizon length N, region of attraction approaches maximum control invariant set.}
+
+\subsection{Soft Constraints}
+
+Original problem:
+
+\mportant{$\min\limits_z f(z)$\\sb.t. $g(z)\leq 0$}
+
+Softened problem:
+
+\mportant{$\min\limits_{z,\epsilon} f(z)+l_\epsilon(\epsilon)$\\sb.t. $g(z)\leq \epsilon$\\$\epsilon\geq 0$}
+
+\note{If the original problem has a feasible solution $z^\ast$, then the softened problem should have the same solution $z^\ast$, and $\epsilon = 0$.}
+
+\mypic{Pictures/PenaltyQuadVSLin}
+
+\textbf{Main result:}
+
+\begin{itemize}
+\ncompaq
+\item $l_\epsilon(\epsilon)=v\cdot\epsilon$ satisfies the requirement for any $v\geq\lambda^\ast\geq0$, where $\lambda^\ast$ is the optimal Lagrange multiplier for the original problem.
+\item \textbf{Disadvantage}: $l_\epsilon(\epsilon)=v\cdot\epsilon$ renders the cost non-smooth.
+\item Solution: Combine quadratic and linear cost:
+s
+\mportant{$l_\epsilon(\epsilon)=v\cdot\epsilon+s\cdot\epsilon^2$}
+
+\note{where $v\geq\lambda^\ast,\ s>0$}
+
+\importname{Exactness}{$v_i> \lambda_i^\ast$}
+\item Extension to multiple constrains:
+
+\mportant{$\l_\epsilon(\epsilon)=\sum\limits_{j=1}^rv_j\cdot\epsilon_j+s_j\cdot\epsilon_j^2$}
+\end{itemize}
+
+\subsubsection{Simplification: Seperation of Objectives}
+
+\begin{enumerate}
+\ncompaq
+\item Minimize violation over horizon:
+\mportable{$\epsilon^{\min}$&$=\argmin\limits_{U,\epsilon}\epsilon_i^TS\epsilon_i+v^T\epsilon_i$\\&s.t. $x_{i+1}=Ax_i+Bu_i$\\&$H_xx_i\leq K_x+\epsilon_i$\\&$H_uu_i\leq K_u$\\&$\epsilon_i\geq 0$}
+
+\textbf{Now fix the slack variables!}
+
+\item Optimize controller performance:
+\mportable{$\min\limits_u$&$\sum\limits_{i=0}^{N-1}x_i^TQx_i+u_i^TRu_i+x_N^TPx_N$\\s.t.&$x_{i+1}=Ax_i+Bu_i$\\&$H_xx_i\leq k_x+\epsilon_i^{\min}$\\&$H_uu_i\leq k_u$}
+\end{enumerate}
+
+\begin{itemize}
+\ncompaq
+\item \textbf{Advantage: }Simplifies tuning, constraints will be satisfied if possible.
+\item \textbf{Disadvantage: }Requires the solution of two optimization problems.
+\end{itemize}
+
+\subsection{Putting it all together}
+
+\begin{itemize}
+\ncompaq
+\item In general state cannot be measured.
+\begin{itemize}
+\ncompaq
+\item Use Kalman filter to estimate the state.
+\end{itemize}
+\item Design tracking problem:
+\begin{itemize}
+\ncompaq
+\item Rewrite problem in delta-formulation.
+\item Setup target steady-state problem.
+\item Calculate terminal weight and scale terminal constraint to guarantee convergence.
+\end{itemize}
+\item Extend to offset-free tracking:
+\begin{itemize}
+\ncompaq
+\item Augment model including disturbance model.
+\item Augment the estimator to estimate the state and the disturbance.
+\item Adapt target steady-state problem using the disturbance estimate.
+\end{itemize}
+\item Possibly: Remove terminal constraint while choosing long horizon.
+\item Introduce soft constraints to ensure feasibility.
+\begin{itemize}
+\ncompaq
+\item Introduce slack variables for constraint relaxation.
+\item Choose penalty on slack variables (quadratic, linear).
+\end{itemize}
+\end{itemize}
+
+\section{Robust MPC}
+
+\subsection{Uncertainty Models}
+
+\begin{itemize}
+\ncompaq
+\item \textbf{Measurement / Input Bias:}
+
+\mportant{$g(x(k),u(k),w(k);\theta)=\tilde{g}(x(k),u(k))+\theta$}
+
+\note{where $\theta$ is unknown, but constant}
+
+\item \textbf{Linear Parameter Varying System:}
+
+\mportant{$g(x(k),u(k),w(k);\theta)=\sum\limits_{j=0}^t\theta_jA_jx(k)+\sum\limits_{k=0}^t\theta_jB_ju(k)$\\$\mathbf{1}^T\theta=1,\ \theta\geq 0$}
+
+\note{where $A_k,B_k$ known, $\theta_k$ unknown, but with fixed value at each sampling time}
+\item \textbf{Additive Stochastic Noise:}
+
+\mportant{$g(x(k),u(k),w(k);\theta)=Ax(k)+Bu(k)+w(k)$}
+
+\note{Distribution of w known}
+\item Additive Bounded Noise
+
+\mportant{$g(x(k),u(k),w(k);\theta)=Ax(k)+Bu(k)+w(k),\quad w\in\mathcal{W}$}
+
+\note{A,B known, w unknown and changing at each sampling instance}
+
+\begin{itemize}
+\ncompaq
+\item Dynamics are linear but impacted by random, bounded noise at each time step.
+\item Can model many non-linearities in this fashion, but often a conservative model.
+\item The noise is \emph{persistent}, i.e. it does not converge to zero in the limit.
+\end{itemize}
+\end{itemize}
+
+\subsection{Impact of Bounded Additive Noise}
+
+\textbf{Goal: }Design control law $u(k)=\kappa(x(k))$ such that the system:
+\begin{enumerate}
+\ncompaq
+\item Satisfies constraints: $\{x(k)\}\subset\mathcal{X},\ \{u(k)\}\subset\mathcal{U}$ for all disturbance realizations.
+\item Is stable: Converges to a neighbourhood of the origin.
+\item Optimizes (expected/worst case) \glqq performance\grqq .
+\item Maximizes the set $\{x(0)|$Conditions 1-3 are met$\}$.
+\end{enumerate}
+
+\mypic{Pictures/NominalTrajectory}
+
+\mportname{\\Nominal System}{$x(k+1)=Ax(k)+Bu(k)$}
+
+\importname{\\Uncertain System}{$x(k+1)=Ax(k)+Bu(k)+w(k),\ w\in\mathcal{W}$}
+
+\subsubsection{Defining a Cost to Minimize}
+
+\begin{itemize}
+\ncompaq
+\item Minimize the expected value (requires assumption on the distribution)
+
+\mportant{$J_N(x_0,U):=E[J(x_0,U,W)]$}
+\item Take the worst-case
+\mportant{$J_N(x_0,U):=\max\limits_{W\in\mathcal{W}^{N-1}}J(x_0,U,W)$}
+\item Take the nominal case
+\mportant{$J_N(x_0,U).=J(x_0,U,0)$}
+\end{itemize}
+
+\note{In this lecture we will assume the nominal case for simplicity.}
+
+\subsubsection{Constraint Satisfaction}
+
+In order to robustly enforce constraints of a linear system the concept of robust invariance is developed:
+
+\finn
+
+First the MPC prediction is broken into two parts:
+
+\sbss{
+\mportable{$\phi_{i+1}$&$A\phi_i+Bu_i+w_i$\\$u_i$&$\in\mathcal{U}$\\$\phi_i$&$\in\mathcal{X}\forall W\in\mathcal{W}^N$}}
+{
+\note{
+\begin{itemize}
+\ncompaq
+\item $i=0\ldots N-1$
+\item Optimize over control actions.
+\item Enforce constraints explicitly by imposing $\phi_i\in\mathcal{X}$ and $u_i\in\mathcal{U}$ for all sequences W.
+\end{itemize}}}
+
+\finn
+
+\hrule
+
+\finn
+
+\sbss{
+\mportable{$\phi_N$&$\in\mathcal{X}_f$\\$\phi_{i+1}$&$=(A+BK)\phi_i+wi$}}{
+\note{
+\begin{itemize}
+\ncompaq
+\item $i=N,\ldots$
+\item Assume control law to be linear $u_i=K\phi_i$.
+\item Enforce constraints implicitly by constraining $\phi_N$ to be in a \textbf{robust invariant set} $\mathcal{X}_f\subseteq\mathcal{X}$ and $K\mathcal{X}_f\subseteq\mathcal{U}$ for the system $\phi_{i+1}=(A+BK)\phi_i+w_i$.
+\end{itemize}
+}}
+
+\subsubsection{Robust Invariance}
+
+A set $\mathcal{O}^\mathcal{W}$ is said to be a robust positive invariant set for the autonomous system $x(k+1)=g(x(k),w(k))$ if
+
+$x\in\mathcal{O}^\mathcal{W}\ \Rightarrow\ g(x,w)\in\mathcal{O}^\mathcal{W}\ ,\ \text{for all }w\in\mathcal{W}$.
+
+\finn
+
+\textbf{Robust Pre-Set: }Given a set $\Omega$ and the dynamic system $x(k+1)=g(x(k),w(k))$, the pre-set of $\Omega$ is the set of states that evolve into the target set $\Omega$ in one time step for all values of the disturbance $w\in\mathcal{W}$:
+
+\mportant{$\text{pre}^\mathcal{W}(\Omega):=\{x|g(x,w)\in\Omega\text{ for all }w\in\mathcal{W}\}$}
+
+See p 24-27 for an example on computing robust pre-sets for linear systems.
+
+\subsubsection{Robust Invariant Set Conditions}
+
+A set $\mathcal{O}^\mathcal{W}$ is a robust positive invariant set if and only if 
+
+\mportant{$\mathcal{O}^\mathcal{W}\subseteq \text{pre}^\mathcal{W}(\mathcal{O}^\mathcal{W})$}
+
+\mypic{Pictures/RobustInvariantSet}
+
+For computing the maximum robust invariant set use the algorithm from the nominal case, replacing pre($\Omega)$ by $\text{pre}^\mathcal{W}(\Omega)$.
+
+\finn
+
+See p. 30-34 for an example on computing robust invariant sets.
+
+\subsubsection{Ensuring satisfaction of robust contstraints}
+
+Goal: Ensure that constraints are satisfied for the MPC sequence:
+
+\mportant{$\phi_i(x_0,U,W)=\left\{\left.x_i+\sum\limits_{j=0}^{i-1}A^jw_j\right|W\in\mathcal{W}^i\right\}\subseteq\mathcal{X}$}
+
+Assume that $\mathcal{X}=\{x|Fx\leq f\}$ then this is equivalent to:
+
+\mportant{$Fx_i+F\sum\limits_{j=0}^{i-1}A^jw_k\leq f\forall W\in\mathcal{W}^i$}
+
+This leads to:
+
+\mportant{$Fx_i\leq f-\max\limits_{W\in\mathcal{W}^i}F\sum\limits_{j=0}^{i-1}A^jw_j=f-h_{\mathcal{W}^i}\left(F\sum\limits_{j=0}^{i-1}A^j\right)$}
+
+\textbf{What this results in is a tightening of the constraints on the nominal system!}
+
+\mypic{Pictures/TightenedConstraints}
+
+For the terminal state constraint we can do exactly the same.
+
+\subsection{Open-Loop MPC}
+
+\begin{align*}
+\min\limits_U\sum\limits_{i=0}^{N-1}&l(x_i,u_i)+l_f(x_N)\\
+\text{subj. to} x_{i+1}&=Ax_i+Bu_i\\
+x_i&\in \mathcal{X}\ominus(\mathcal{W}\oplus A\mathcal{W}\oplus\cdots\oplus A^{i-1}\mathcal{W})\\
+u_i&\in\mathcal{U}\\
+x_N\in\mathcal{X}_f\ominus(\mathcal{W}\oplus A\mathcal{W}\oplus\cdots\oplus A^{i-1}\mathcal{W})
+\end{align*}
+
+where $\mathcal{X}_f$ is a robust invariant set for the system $x(k+1)=(A+BK)x(k)$ for some stabilizing $K$.
+
+\begin{itemize}
+\item We do \textbf{nominal} MPC but with tighter constraints on the states. 
+\item If $U^\ast(x(k))$ is the optimizer of the robust open-loop MPC problem for $x(k)\in\mathcal{X}_0$ then the system $Ax(k)+Bu_0^\ast(x(k))+w(k)\in\mathcal{X}_0$ for all $w\in\mathcal{W}$. This follows since the trajectory we computed at the current time is feasible for any disturbance.
+\item Potentially has a very small region of attraction, in particular for unstable systems.
+\end{itemize}
+
+\subsection{Closed-Loop Predictions}
+
+\textbf{Challenge: }Cannot predict where the state of the system will evolve. We can only compute a set of trajectories that the system may follow.
+
+\finn
+
+\textbf{Idea: }Design a control law that will satisfy constraints and stabilize the system for all possible disturbances.
+
+Possible structure of control-functions:
+
+\begin{itemize}
+\ncompaq
+\item \textbf{Pre-stabilization:} $\mu_i(x)=Kx+v_i$
+\begin{itemize}
+\ncompaq
+\item Fixed K, s.t. A+BK is stable.
+\item Simple, often conservative.
+\end{itemize}
+\item \textbf{Linear feedback:} $\mu_i(x)=K_ix+v_i$
+\begin{itemize}
+\ncompaq
+\item Optimize over $K_i$ and $v_i$
+\item Non-convex. Extremely difficult to solve.
+\end{itemize}
+\item \textbf{Disturbance feedback:} $\mu_i(x)=\sum\limits_{j=0}^{i-1} Mw_j+v_i$
+\begin{itemize}
+\ncompaq
+\item Optimize over M and $v_j$
+\item Equivalent to linear feedback, but convex
+\item Can be very effective, but computationally intense.
+\end{itemize}
+\item \textbf{Tube-MPC} $\mu_i(x)=v_i+K(x-\bar{x}_i)$
+\begin{itemize}
+\ncompaq
+\item fixed K, s.t. A+BK is stable
+\item Optimize over $\bar{x}_i$ and $v_i$
+\item Simple, and can be effective
+\end{itemize}
+\end{itemize}
+
+\subsection{Tube-MPC}
+
+Seperate the availabe control authority into two parts:
+
+\begin{enumerate}
+\ncompaq
+\item A portion that determines the optimal trajectory to the origin for the nominal system.
+\mportant{$z(k+1)=Az(k)+Bv(k)$}
+\item A portion that compenstates for deviations from this system, i.e. a 'tracking' controller, to keep the real trajectory close to the nominal.
+
+\mportant{$u_i=K(x_i-z_i)+v_i$}
+
+for some linear controller K, which stabilizes the nominal system.
+\end{enumerate}
+
+\subsubsection{Error dynamics}
+
+Define the error $e_i=x_i-z_i$ which gives the error dynamics:
+
+\mportable{$e_{i+1}$&$=x_{i+1}-z_{i+1}$\\&$=(A+BK)e_i+w_i$}
+
+There is some set that e will stay inside for all time. We want the smallest such set (the 'minimal invariant set').
+
+\mypic{Pictures/TubeMPC}
+
+To make it work:
+
+\begin{itemize}
+\ncompaq
+\item Compute the set $\mathcal{E}$ that the error will remain inside.
+\item Modify constraints on nominal trajectory $\{z_i\}$ so that $z_i\bigoplus\mathcal{E}\subset\mathcal{X}$ and $v_i\in\mathcal{U}\ominus\K\mathcal{E}$.
+\item Formulate as convex optimization problem.
+\end{itemize}
+
+And prove that
+\begin{itemize}
+\ncompaq
+\item Constraints are robustly satisfied.
+\item The closed-loop system is robustly stable.
+\end{itemize}
+
+\subsubsection{Compute $\mathcal{E}$}
+
+What is the set $F_i$ that contains all possible states $x_i$?
+
+\mportant{$F_i=\mathcal{W}\bigoplus A\mathcal{W}\ldots\bigoplus A^{i-1}\mathcal{W}=\bigoplus\limits_{j=0}^{i-1}A^j\mathcal{W},\ F_0:=\{0\}$}
+
+\mypic{Pictures/MinimalRobustInvariantSet}
+
+\subsubsection{Constraint Tightening}
+
+We want to work with the nominal system but ensure that the noisy system satisfies constraints!
+
+\importname{Sufficient condition}{$z_i\bigoplus\mathcal{E}\subseteq\mathcal{X}\Leftarrow z_i\in\mathcal{X}\ominus\mathcal{E}$}
+
+The set $\mathcal{E}$ is known offline - thus the tightened constraints can be computed offline.
+
+\finn
+
+For the input:
+
+\important{$u_i\in K\mathcal{E}\bigoplus v_i\subset\mathcal{U}\Leftarrow v_i\in\mathcal{U}\ominus K\mathcal{E}$}
+
+\subsubsection{Tube-MPC Problem Formulation}
+
+\note{
+\mportable{Feasible set:&$\mathcal{Z}(x_0):=\left\{Z,V\left|\begin{matrix}z_{i+1}=Az_i+Bv_i&i\in[0,N-1]\\z_i\in\mathcal{X}\ominus\mathcal{E}&i\in[0,N-1]\\v_i\in\mathcal{U}\ominus K\mathcal{E}&i\in[0,N-1]\\z_N\in\mathcal{X}_f&\\x_0\in z_0\bigoplus\mathcal{E}&\end{matrix}\right.\right\}$\\ Cost function:&$J(Z,V:=\sum\limits_{i=0}^{N-1}l(z_i,v_i)+l_f(z_N)$\\Optimization:&$(V^\ast(x_0),Z^\ast(x_0))=\argmin\limits_{V,Z}\{J(Z,V|(Z,V)\in\mathcal{Z}(x_0)\}$\\Control law:&$\mu_{tube}(x):=K(x-z_0^\ast(x))+v_0^\ast(x)$}}
+
+\begin{itemize}
+\ncompaq
+\item Optimizing the nominal system, with tightened state and input constraints.
+\item First tube center is optimization variable \dahe has to be within $\mathcal{E}$ of $x_0$.
+\item The cost is with respect to the tube centers (nominal system).
+\item The terminal set is with respect to the tightened constraints.
+\end{itemize}
+
+\subsubsection{Tube-MPC Assumptions}
+
+\begin{enumerate}
+\ncompaq
+\item The stage cost is a positive function, i.e. it is strictly positive and only zero at the origin.
+\item The terminal set is invariant \textbf{for the nominal system }under the local control law $\kappa_f(z):$
+
+\mportant{$Az+B\kappa_f(z)\in\mathcal{X}_f$ for all $z\in\mathcal{X}_f$}
+
+All \textbf{tightened state and input constraints } are satisfied in $\mathcal{X}_f$:
+
+\mportant{$\mathcal{X}_f\in\mathcal{X}\ominus\mathcal{E},\ \kappa_f(z)\in\mathcal{U}\ominus K\mathcal{E}$ for all $z\in\mathcal{X}_f$}
+
+\item Terminal cost is a continuous Lyapunov function in the terminal set $\mathcal{X}_f$:
+
+\mportant{$l_f(Az+B\kappa_f(z))\leq -l(z,\kappa_f(z))$ for all $z\in\mathcal{X}_f$}
+
+And thus $\mathcal{X}_f$ is a level set of $l_f$.
+\end{enumerate}
+
+\subsubsection{Tube-MPC Robust Invariance}
+
+The set $\mathcal{Z}:=\{x|\mathcal{Z}(x)\neq\emptyset\}$ is a robust invariant set of the system $x(k+1)=Ax(k)+B\mu_{tube}(x(k))+w(k)$ subject to the constraints $x,u\in\mathcal{X}\times\mathcal{U}$.
+
+\finn
+
+Let $(\{v_0^\ast,\ldots,v_{N-1}^\ast\},\{z_0^\ast,\ldots,z_N^\ast\})$ be the optimal solution for $x(k)$.
+
+\finn
+
+Now since by construction $x(k+1)\in z_1\oplus\mathcal{E}$ the optimal sequence is feasible for all $x(k+1)$.
+
+\subsubsection{Tube-MPC Robust Stability}
+
+The state $x(k)$ of the system $x(k+1)=Ax(k)+B\mu_{tube}(x(k))+w(k)$ converges in the limit to the set $\mathcal{E}$.
+
+\begin{align*}
+J^\ast(x(k))&=\sum\limits_{i=0}^{N-1}l(z_i^\ast,v_i^\ast)+l_f(z_N^\ast)\\
+J^\ast(x(k+1))&\leq\sum\limits_{i=1}^N l(z^\ast_i,v_i^\ast)+l_f(z_N+1)\\
+&=J^\ast(x(k))-\underbrace{l(z_0^\ast,v_0^\ast)}_{\geq 0}\\
+&\underbrace{-l_f(z_N^\ast)+l_f(z_{N+1}+l(z_N^\ast,\kappa_f(z_N^\ast))}_{\leq 0\text{($l_f$ is a Lyapunov function in $\mathcal{X}_f$}}
+\end{align*}
+
+This shows that $\lim\limits_{k\rightarrow\infty}J(z_0^\ast(x(k)))=0$ and therefore $\lim\limits_{k\rightarrow\infty}z_0^\ast(x(k))=0$.
+
+\finn
+
+However $x(k)$ does not tend to zero but stay within a region $\mathcal{E}$ around zero.
+
+\subsection{Summary: Tube MPC}
+
+\textbf{-- Offline --}
+\begin{enumerate}
+\ncompaq
+\item Choose a stabilizing controller $K$ such that $||A+BK||\leq 1$.
+\item Compute the minimal robust invariant set $\mathcal{E}=F_\infty$ for the system $x(k+1)=(A+BK)x(k)+w(k),\ w\in\mathcal{W}^1$.
+\item Compute the tightened constraints 
+
+$\tilde{\mathcal{X}}:=\mathcal{X}\ominus\mathcal{E},\ \tilde{\mathcal{U}}:=\mathcal{U}\ominus K\mathcal{E}$
+\item Choose terminal weight function $l_f$ and constraint $\mathcal{X}_f$ satisfying the assumptions made.
+\end{enumerate}
+
+\textbf{-- Online --}
+\begin{enumerate}
+\compaq
+\item Measure / estimate state x.
+\item Solve the problem 
+
+$(V^\ast(x),Z^\ast(x))=\argmin_{V,Z}\{J(Z,V)|(Z,V)\in\mathcal{Z}(x)\}$
+\item Set the input to $u=K(x-z_0^\ast(x))+v_0^\ast(x)$
+\end{enumerate}
+
+\hrule
+
+\finn
+
+\textbf{Benefits:}
+\begin{itemize}
+\ncompaq
+\item Less conservative than open-loop robust MPC, since we are actively compensation for the disturbance.
+\item Works for unstable systems.
+\item Optimization problems to solve are simple.
+\end{itemize}
+
+\textbf{Cons:}
+\begin{itemize}
+\ncompaq
+\item Sub-optimal MPC (optimal is extremely difficult).
+\item Reduced feasible set when compared to nominal MPC.
+\item We need to know what $\mathcal{W}$ is (this is usually not realistic).
+\end{itemize}
+
+\subsection{Summary on Robust MPC for Uncertain Systems}
+
+\begin{itemize}
+\item \textbf{Idea:} Compensate for noise in prediction to ensure all constraints are met.
+\item[-] Complex (some schemes are simple to implement, like tubes, but complex to understand)
+\item[-] Must know the largest noise $\mathcal{W}$
+\item[-] Often conservative
+\item[-] Feasible set may be small
+\item[+] Feasible set is invariant - we know exactly when the controller will work
+\item[+] Easier to tune - knobs to tradeoff robustness against performance
+\end{itemize}
+
+\section{Robustness of Nominal MPC}
+
+We want to control the noisy system
+
+\mportant{$x(k+1)=Ax(k)+Bu(k)+w(k)$}
+
+Now running standard MPC on that gives us the following closed-loop system:
+
+\mportant{$x(k+1)=Ax(k)+Bu^\ast_0(x(k))+w(k)$}
+
+for which we can prove convergence to a neighbourhood of the origin (for linear systems), but depending on the noise realization it may not be feasible.
+
+\subsection{Do we still have Lyapunov decrease?}
+
+Nominally
+
+\mportant{$J^\ast(Ax+Bu^\ast(x))-J^\ast(x)\leq -l(x,u^\ast(x))$}
+
+But now our state develops as follows:
+
+\mportant{$x(k+1)=Ax(k)+Bu^\ast(x(k))+w(k)$}
+
+The optimal cost $J^\ast$ is continuous for linear systems, convex constraints and continuous stage costs:
+
+\mportant{$|J^\ast(Ax+Bu^\ast(x)+w)-J^\ast(Ax+Bu^\ast(x))|\leq\gamma||Ax+Bu^\ast(x)+w-(Ax+Bu^\ast(x))||=\gamma||w||$}
+
+Thus the Lyapunov decrease can be bounded as:
+
+\begin{align*}
+J^\ast&(Ax+Bu^\ast(x)+w)-J^\ast(x)\\
+&=J^\ast(Ax+Bu^\ast(x)+w)-J^\ast(x)\\
+&\quad-J^\ast(Ax+Bu^\ast(x))+J^\ast(Ax+Bu^\ast(x))\\
+&\leq J^\ast(Ax+Bu^\ast(x))-J^\ast(x)+\gamma||w||\\
+&\leq -l(x,u^\ast(x)+\gamma||w||
+\end{align*}
+
+\begin{itemize}
+\item Amount of decrease grows with $||x||$
+\item Amount of increase is upper bounded by 
+
+$\max\{||w||\ |w\in\mathcal{W}\}$
+\item Thus we move towards the origin until there is a balance between the size of $x$ and the size of $w$. Thus the system is \textbf{Input-to-State-Stable (ISS)}
+\end{itemize}
+
+\mypic{Pictures/ISS}
+
+\subsection{Summary}
+
+\begin{itemize}
+\ncompaq
+\item[+] Simple
+\item[+] No knowledge of the noise set $\mathcal{W}$ is required
+\item[+] Often very effective in practice
+\item[+] Feasible set is large (we can find a solution, but it might not work)
+\item[+] Region of attraction may be larger than other approaches
+\item[-] Very difficult to determine region of attraction
+\item[-] Hard to tune - no obvious way to tradeoff robustness against performance
+\item[-] Works for linear systems, for nonlinear systems only under continuity assumptions
+
+\end{itemize}
+
+\section{Implementation}
+
+\subsection{Explicit MPC}
+
+\begin{itemize}
+\ncompaq
+\item Linear MPC + Quadratic or linear-norm cost $\Rightarrow$ Controller is piecewise affine function
+\item We can pre-compute the controller offline
+\item Online evaluation of PWA is very fast
+\item This is only possible for very small systems (3-6 states)
+\end{itemize}
+
+When there is an explicit solution to the MPC problem posed, the optimization can be solved offline, resulting in a control law that is piecewise affine. Thus for finding the current control action, the system state has to be located within the partitioned feasible polyhedron.  This search can be done sequentially or through a search tree:
+
+\subsubsection{Sequential Search vs. Search Tree}
+
+\begin{itemize}
+\ncompaq
+\item \textbf{Sequential Search}
+\begin{itemize}
+\item Very simple
+\item Linear in number of regions
+\end{itemize}
+\item \textbf{Search Tree}
+\begin{itemize}
+\item Offline construction of a search tree by finding hyperplanes that separate regions into two equally sized parts and repeating that for the resulting subsets.
+\item Potentially logarithmic
+\item Significant offline processing (reasonable for $<1000$ regions)
+\end{itemize}
+\end{itemize}
+
+\subsection{Iterative Optimization Methods}
+
+In all but the simplest cases no explicit solution can be obtained.
+
+\textbf{Iterative optimization methods:}
+
+\mportant{$x^{(i+1)}=\Psi(x^{(i)},f,\mathbb{Q}),\ i=0,1,\ldots,m-1$\\s.t.\\$|f(x^{(m)})-f(x^\ast)|\leq\epsilon$ and dist$(x^{(m)},\mathbb{Q})\leq\delta$}
+
+\note{where $\epsilon$ and $\delta$ are user-defined tolerances.}
+
+%\subsection{Unconstrained Minimization}
+%
+%\mportant{$\min\limits_xf(x)$ with $f:\mathbb{R}^n\rightarrow \mathbb{R}$}
+%
+%\note{where f is convex and twice continuously differentiable and $p^\ast=\min_xf(x)$ is attained and finite}
+%
+%\finn
+%
+%\textbf{Optimality Conditions:}
+%
+%Necessary and sufficient condition: Assume $f(\cdot)$ differentiable at $x^\ast$. If f is convex, then $x^\ast$ is a global minimizer if and only if $\nabla f(x^\ast)=0$.
+%
+%\finn
+
+\subsubsection{Descent Methods}
+
+\mportant{$x^{(i+1)}=x^{(i)}+h^{(i)}\Delta x^{(i)}$ with $f(x^{(i+1)}<f(x^{(i)})$}
+
+\begin{itemize}
+\ncompaq
+\item $\Delta x$ is the \textbf{step} or \textbf{search direction}.
+\item $h^{(i)}$ is the \textbf{step size} or \textbf{step length}.
+\item $f(x^{(i+1)})<f(x^{(i)})$, i.e. $\Delta x^{(i)}$ is a \textbf{descent direction}.
+\item There exists a $h^{(i)}>0$ s.t. $f(x^{(i+1)}<f(x^{(i)})$if $\nabla f(x^{(i)})\Delta x^{(i)}<0$.
+\end{itemize}
+
+\mypic{Pictures/DescentMethod}
+
+\subsubsection{Gradient Methods}
+
+Idea: Gradient $\nabla f$ gives direction of steepest local ascent. $\Rightarrow$ Make steps of size h into anti-gradient direction.
+
+\important{$x^{(i+1)}=x^{(i)}-h^{(i)}\nabla f(x^{(i)})$}
+
+%\subsubsection{L-smoothness and Constant Step Size}
+%
+%\textbf{Assumption:} $||\nabla f(x)-\nabla f(y)||\leq L||x-y||\ \forall x,y\in\mathbb{R}^n$
+%
+%$\Leftrightarrow$ $\nabla f$ is Lipschitz-continuous with constant L.
+%
+%$\Leftrightarrow$ $f$ can be upper bounded by a quadratic function:
+%
+%\mportant{$f(x)\leq\textcolor{red}{f(y)+\nabla f(y)^T(x-y)+\frac{L}{2}||x-y||^2}\ \forall x,y\in\mathbb{R}^n$}
+%
+%\mypic{Pictures/GradientMethod}
+%
+%\important{$\Rightarrow$ Choose constant step size: $h^{(i)} = \frac{1}{L}$}
+%
+%\textbf{The effect of inexact L:}
+%
+%\mypic{Pictures/InexactL}
+%
+%\subsubsection{Newton's Method}
+%
+%\mportant{$x^{(i+1)}=x^{(i)}+h^{(i)}\Delta x^{(i)}$ with $f(x^{(i+1)}<f(x^{(i)})$}
+%
+%\textbf{Idea:} Minimize second-order approximation of f at current iteration.
+%
+%\mportant{$x^{(i+1)}=\argmin\limits_x $\\\note{$\textcolor{green}{f(x^{(i)})+\nabla f(x^{(i)})^T(x-x^{(i)})+\onha(x-x^{(i)})^T\nabla^2f(x^{(i)}(x-x^{(i)})}$}}
+%
+%\mypic{Pictures/NewtonsMethod}
+%
+%\importname{Newton step}{$x^{(i)}=x^{(i)}-h^{(i)}\left(\nabla^2f(x^{(i)}\right)^{-1}\nabla f(x^{(i)}$}
+%
+%\note{since $\tilde{f}$ is not an upper bound on f, full Newton step does not necessarily yield descent.}
+%
+%\finn
+%
+%\textbf{\important{Solution: Line search}}
+%
+%\begin{itemize}
+%\ncompaq
+%\item \textbf{Exact:} Compute \textbf{best} $h^{(i)}$:
+%
+%\mportant{$h^{(i)\ast}=\argmin\limits_{h>0} f(x^{(i)}+h^{(i)}\Delta x_{nt})$}
+%
+%\item \textbf{Inexact:} Find $h^{(i)}$ that decreases f by some amount using Backtracking.
+%
+%\finn
+%
+%for $\alpha\in(0,0.5)$ and $\beta\in(0,1)$
+%
+%\textbf{Initialize} $h^{(i)}=1$
+%
+%\textbf{while} 
+%  
+%$f(x^{(i)}+h^{(i)}\Delta x_{nt})>f(x^{(i)})\alpha h^{(i)}\nabla f(x^{(i)})^T\Delta x_{nt}$ 
+%  
+%\textbf{do} $h^(i)\leftarrow \beta h^{(i)}$
+%\end{itemize}
+%
+%\subsubsection{Equality constraints in Newtons's method}
+%
+%\mportant{minimize $f(x)$\\subject to $\textcolor{blue}{Ax=b}$}
+%
+%Newton: Minimize quadratic model of $f$ around $x_i$ to obtain descent direction.
+%
+%\mportant{$\Delta x_{nt}(x_i)\in\argmin\limits_{\Delta x}\onha\Delta x^T\nabla^2f(x^{(i)})\Delta x+\nabla f(x^{(i)})\Delta x$\\s.t. $\textcolor{blue}{A\Delta x=0}$}
+%
+%Equality constraints demand that the descent direction is chosen such that they are not affected.
+%
+%\textbf{Computation:}
+%
+%\mportable{$\nabla^2f(x^{(i)})\Delta x+\nabla f(x^{(i)})+A^T\lambda$&$=0$\\$A\Delta x$&$=0$}
+%
+%\important{$\begin{bmatrix}\nabla^2f(x^{(i)})&A^T\\A&0\end{bmatrix}\begin{bmatrix}\Delta x\\\lambda\end{bmatrix}=\begin{bmatrix}-\nabla f(x^{(i)})\\0\end{bmatrix}$}
+%
+%\subsection{Gradient methods}
+%
+%\mportable{minimize&$f(x)$\\subject to &$x\in\mathbb{Q}$}
+%
+%Incorporate constraints in gradient step:
+%
+%\important{$x^{(i+1)}=\textcolor{red}{\pi_\mathbb{Q}(}x^{(i)}-h^{(i)}\nabla f(x^{(i)})\textcolor{red}{)}$}
+%
+%\note{where $\pi_\mathbb{Q}\overset{\Delta}{=}\argmin\limits_x \onha||x-y||_2^2$ is a \textbf{projection}}
+%
+%\mypic{Pictures/GradientProjection}
+%
+%\note{If the projection is easy to compute this is an extremely efficient algorithm. If the projection can only be computed numerically we solve the dual problem instead.}
+%
+%\finn
+%
+%\textbf{Sets that allow inexpensive Projections}
+%
+%\mypic{Pictures/InexpensiveSets}
+%\mypic{Pictures/InexpensiveSets2}
+
+\subsubsection{Interior-point Methods}
+
+\textbf{Constrained Minimization Problem:}
+
+\mportant{$\min f(x)$\\s.t. $g_i(x)\leq 0,\ i=1\ldots m$}
+
+Assumptions:
+
+\begin{itemize}
+\ncompaq
+\item $f,g_i$ convex, twice continuously differentiable
+\item $f(x^\ast)$ is finite and attained
+\item strict feasiblity: there exists a $\tilde{x}$ with 
+
+\mportant{$\tilde{x}\in$dom$f,\ g_i(\tilde{x})<0,\ i=1\ldots m$}
+
+\item feasible set is closed an compact
+\end{itemize}
+
+%\subsubsection{Barrier Method}
+%
+%Going from
+%
+%\mportant{$\min f(x)$\\s.t. $g_i(x)\leq 0,\ i=1\ldots m$}
+%
+%to
+%
+%\mportant{$\min f(x) + \kappa\phi(x)$}
+%
+%\importname{Indicator function}{$\phi(x)=\sum\limits_{i=1}^ml_-(g_i(x)),\ \kappa=1$}
+%
+%\note{where $l_-(u) = 0$ if $u\leq 0$ and $l_-=\infty$ otherwise}
+%
+%Approximation for differentiability by logarithmic barrier:
+%
+%\important{$\phi(x)=-\sum\limits_{i=1}^m \log(-g_i(x))\ \text{dom}\phi = \{x|g_i(x)<0\}$}
+%
+%\begin{itemize}
+%\ncompaq
+%\item Convex, smooth on its domain.
+%\item $\phi(x)\rightarrow\infty$ as x approaches boundary of domain.
+%\item $\argmin\limits_x\phi(x)$ is called \textbf{analytic center} of the set defined by the inequalities.
+%\item Twice continuously differentiable with derivatives:
+%\mportable{$\nabla\phi(x)$&$=\sum\limits_{i=1}^m\frac{1}{-g_i(x)}\nabla g_i(x)$\\$\nabla^2\phi(x)$&$=\sum\limits_{i=1}^m\frac{1}{g_i(x)^2}\nabla g_i(x)\nabla g_i(x)^t+\frac{1}{-g_i(x)}\nabla^2 g_i(x)$}
+%\end{itemize}
+%
+%
+%\subsubsection{Central Path}
+%
+%Now define $x^\ast(\kappa)$ as the solution of
+%
+%\mportant{$\min\limits_x f(x)+\kappa\phi(x)$}
+%
+%\begin{itemize}
+%\ncompaq
+%\item Barrier parameter $\kappa$ determines relative weight between objective and barrier.
+%\item Barrier 'traps' $x(\kappa$ in strictly feasible set.
+%\item \textbf{Central path} is defined as $\{x^\ast(\kappa)|\kappa>0\}$
+%\item For given $\kappa$ we can compute $x^\ast(\kappa)$ by solving a smooth unconstrained minimization problem.
+%\item Intuitively $x^\ast(\kappa)$ converges to optimal solution as $\kappa\rightarrow 0$
+%\end{itemize}
+%
+%\subsubsection{Path-following Method}
+%
+%\textbf{Idea: }Follow central path to the optimal solution.
+%
+%\begin{enumerate}
+%\ncompaq
+%\item Assume current solution is on the central path.
+%\item Obtain $\kappa^{(i+1)}$ by decreasing $\kappa^{(i)}$ by some amount.
+%\item solve for $x^\ast(\kappa^{(i+1)})$ starting from $x^\ast(\kappa^{(i)})$. This is called a centering step.
+%\item If the method converges, it converges to the optimal solution.
+%\end{enumerate}
+
+\section{Nonlinear MPC}
+
+\begin{itemize}
+\item Presented assumptions on the terminal set and cost did not rely on linearity
+\item Lyapunov stability is a general framework to analyze stability of nonlinear dynamic systems
+\item \textbf{Results can be directly extended to nonlinear systems}
+\item Computing the sets $\mathcal{X}_f$ and function $l_f$ can be very difficult.
+\end{itemize}
+
+Practical approaches include:
+
+\begin{itemize}
+\item Choose zero terminal constraint (no terminal cost needed)
+\item Linearization (for quadratic cost)
+\begin{itemize}
+\item Linearize system around origin, assuming the linearization is stabilizable.
+\item Design auxiliary controller $\kappa_f(x)=Kx$, terminal cost $l_f(x)=x^TPx$ and constraint set $\mathcal{X}_f=\{x|x^TPx\leq\alpha\}$ for linearized system s.t.
+
+\begin{itemize}
+\item $l_f(A'+B'K)x)-l_f(x)=-2x^T(Q+K^TRK)x\ \forall x\in\mathcal{X}_f$
+\item All state and input constraints are satisfied in $\mathcal{X}_f$
+\item $\alpha$ is small enough such that
+\begin{align*}
+l_f&(g(x,Kx))-l_f((A'+B'K)x)\\
+&\leq x^T(Q+K^TRK)x&\forall x\in\mathcal{X}_f\\
+\Rightarrow l_f&(g(x,Kx))-l_f(x)\\
+&\leq -x^T(Q+K^TRK)x&\forall x\in\mathcal{X}_f
+\end{align*}
+
+Terminal cost is a Lyapunov function in the terminal set and terminal set is invariant also for the nonlinear system.
+\end{itemize}
+\end{itemize}
+\item At each time step: Linearize the system around a trajectory (usually solution from previous time step). Solve convex problem.
+\item Solve nonlinear program:
+\begin{itemize}
+\item Sequential quadratic programming
+
+Solvers: SNOPT, ACADO, NPSOL, KNITRO
+\item Interior-point method
+
+Solvers: IPOPT, FORCES Pro, KNITRO
+\item Non-convex problem, convergence only to locally optimal solution (under some assumptions)
+\end{itemize}
+\end{itemize}
+
+\end{multicols*}
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
