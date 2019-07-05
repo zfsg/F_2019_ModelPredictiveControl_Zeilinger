@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="129.15446mm"
+   height="73.96994mm"
+   viewBox="0 0 129.15447 73.96994"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
+   sodipodi:docname="SupportEllipse.svg">
+  <defs
+     id="defs2">
+    <pattern
+       inkscape:collect="always"
+       xlink:href="#Strips1_3"
+       id="pattern3842"
+       patternTransform="matrix(0.33894844,-0.50424658,-102.54279,-68.928018,0,0)" />
+    <pattern
+       inkscape:stockid="Stripes 1:3"
+       id="Strips1_3"
+       patternTransform="translate(0,0) scale(10,10)"
+       height="1"
+       width="4"
+       patternUnits="userSpaceOnUse"
+       inkscape:collect="always">
+      <rect
+         id="rect3056"
+         height="2"
+         width="1"
+         y="-0.5"
+         x="0"
+         style="fill:black;stroke:none" />
+    </pattern>
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient3813">
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1;"
+         offset="0"
+         id="stop3809" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:0;"
+         offset="1"
+         id="stop3811" />
+    </linearGradient>
+    <marker
+       inkscape:isstock="true"
+       style="overflow:visible"
+       id="marker2182"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Mend">
+      <path
+         transform="matrix(-0.4,0,0,-0.4,-4,0)"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.00000003pt;stroke-opacity:1"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path2180"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker1681"
+       style="overflow:visible"
+       inkscape:isstock="true"
+       inkscape:collect="always">
+      <path
+         id="path1679"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.00000003pt;stroke-opacity:1"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <marker
+       inkscape:isstock="true"
+       style="overflow:visible"
+       id="marker1127"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Mend"
+       inkscape:collect="always">
+      <path
+         transform="matrix(-0.4,0,0,-0.4,-4,0)"
+         style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1.00000003pt;stroke-opacity:1"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path1125"
+         inkscape:connector-curvature="0" />
+    </marker>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3813"
+       id="linearGradient3817"
+       x1="106.11362"
+       y1="88.071228"
+       x2="108.44698"
+       y2="114.24018"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(34.768632,-146.57522)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3813"
+       id="linearGradient3831"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(32.90734,-145.48952)"
+       x1="107.46529"
+       y1="93.480865"
+       x2="108.44698"
+       y2="114.24018" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3813"
+       id="linearGradient3838"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(32.90734,-145.48952)"
+       x1="107.46529"
+       y1="93.480865"
+       x2="108.44698"
+       y2="114.24018" />
+    <marker
+       inkscape:isstock="true"
+       style="overflow:visible"
+       id="marker2182-8"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Mend">
+      <path
+         inkscape:connector-curvature="0"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)"
+         style="fill:#ef2929;fill-opacity:1;fill-rule:evenodd;stroke:#ef2929;stroke-width:1.00000003pt;stroke-opacity:1"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path2180-7" />
+    </marker>
+    <marker
+       inkscape:isstock="true"
+       style="overflow:visible"
+       id="marker2182-8-8"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Mend">
+      <path
+         inkscape:connector-curvature="0"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)"
+         style="fill:#ef2929;fill-opacity:1;fill-rule:evenodd;stroke:#ef2929;stroke-width:1.00000003pt;stroke-opacity:1"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path2180-7-0" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="2.8"
+     inkscape:cx="209.93924"
+     inkscape:cy="145.25026"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:snap-global="false"
+     showguides="true"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:window-width="1920"
+     inkscape:window-height="1013"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:guide-bbox="true">
+    <inkscape:grid
+       type="xygrid"
+       id="grid1231"
+       originx="-15.42143"
+       originy="-151.30385" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-15.42143,-71.726198)">
+    <path
+       inkscape:connector-curvature="0"
+       id="path2125-7-7-0"
+       d="m 24.468852,137.62767 12.015921,-6.9374"
+       style="fill:#ef2929;stroke:#ef2929;stroke-width:0.52916676;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#marker2182-8-8)" />
+    <g
+       id="g4126"
+       transform="translate(-20.579753,4.8108515)">
+      <path
+         style="fill:none;stroke:#000000;stroke-width:0.5291667;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker1127)"
+         d="M 44.979167,132.95833 H 75.40625"
+         id="path1123"
+         inkscape:connector-curvature="0" />
+      <text
+         id="text1445"
+         y="105.13699"
+         x="47.813988"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222223px;line-height:1.25;font-family:'Franklin Gothic Book';-inkscape-font-specification:'Franklin Gothic Book, ';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="font-size:4.23333311px;stroke-width:0.26458332"
+           y="105.13699"
+           x="47.813988"
+           id="tspan1443"
+           sodipodi:role="line">$x_1$</tspan></text>
+      <text
+         id="text1445-0"
+         y="139.00595"
+         x="72.768082"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222223px;line-height:1.25;font-family:'Franklin Gothic Book';-inkscape-font-specification:'Franklin Gothic Book, ';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="font-size:4.23333311px;stroke-width:0.26458332"
+           y="139.00595"
+           x="72.768082"
+           id="tspan1443-9"
+           sodipodi:role="line">$x_2$</tspan></text>
+      <path
+         inkscape:connector-curvature="0"
+         id="path1677"
+         d="M 44.979167,132.95833 V 102.53125"
+         style="fill:none;stroke:#000000;stroke-width:0.5291667;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker1681)" />
+    </g>
+    <g
+       id="g3829"
+       transform="matrix(1.3211538,0,0,1.3211538,-31.355796,-30.959309)"
+       style="stroke-width:0.75691414">
+      <g
+         id="g3851"
+         transform="translate(4.8298458,8.8657506)"
+         style="stroke-width:0.75691414">
+        <g
+           transform="translate(9.4494049,-4.9136904)"
+           id="g3836"
+           style="stroke-width:0.75691414">
+          <g
+             id="g3824"
+             style="stroke-width:0.75691414">
+            <rect
+               style="opacity:1;vector-effect:none;fill:url(#pattern3842);fill-opacity:1;stroke:none;stroke-width:0.20026685;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+               id="rect2320"
+               width="80.036469"
+               height="37.703129"
+               x="96.690697"
+               y="-63.710552"
+               ry="0"
+               transform="rotate(60)" />
+          </g>
+          <rect
+             transform="rotate(60)"
+             ry="0"
+             y="-71.721535"
+             x="96.567848"
+             height="41.047474"
+             width="83.561211"
+             id="rect3807"
+             style="opacity:1;vector-effect:none;fill:url(#linearGradient3838);fill-opacity:1;stroke:none;stroke-width:0.20026685;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke" />
+        </g>
+        <path
+           inkscape:connector-curvature="0"
+           id="path3844"
+           d="M 80.571752,66.266414 120.70057,135.70098"
+           style="fill:none;stroke:#000000;stroke-width:0.40053374;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      </g>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;line-height:1.25;font-family:'Franklin Gothic Book';-inkscape-font-specification:'Franklin Gothic Book, ';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#ef2929;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="117.07812"
+       y="107.72842"
+       id="text4070"><tspan
+         sodipodi:role="line"
+         id="tspan4068"
+         x="117.07812"
+         y="107.72842"
+         style="fill:#ef2929;stroke-width:0.26458332">$\vec{F}_i$</tspan></text>
+    <path
+       inkscape:connector-curvature="0"
+       id="path2125-7-7"
+       d="m 105.40761,109.20042 12.01592,-6.9374"
+       style="fill:#ef2929;stroke:#ef2929;stroke-width:0.5291667;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#marker2182-8)" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;line-height:1.25;font-family:'Franklin Gothic Book';-inkscape-font-specification:'Franklin Gothic Book, ';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#ef2929;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="116.72777"
+       y="115.16909"
+       id="text4070-4"><tspan
+         sodipodi:role="line"
+         id="tspan4068-2"
+         x="116.72777"
+         y="115.16909"
+         style="fill:#ef2929;stroke-width:0.26458332">$\vec{F}_i\vec{x}\leq f_i$</tspan></text>
+    <g
+       id="g4341"
+       transform="translate(-4.4099472,-9.8889725)">
+      <g
+         transform="translate(-0.40090429,0.26726953)"
+         id="g4290">
+        <g
+           id="g2300">
+          <path
+             inkscape:connector-curvature="0"
+             id="path2125"
+             d="m 67.912966,97.34642 21.399762,37.0654"
+             style="fill:#000000;stroke:#000000;stroke-width:0.26458332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:1.05833335, 0.26458334;stroke-dashoffset:0;stroke-opacity:1" />
+          <path
+             inkscape:connector-curvature="0"
+             id="path2125-7"
+             d="m 67.99523,97.440035 12.015927,-6.9374"
+             style="fill:#000000;stroke:#000000;stroke-width:0.26458332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#marker2182)" />
+        </g>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222223px;line-height:1.25;font-family:'Franklin Gothic Book';-inkscape-font-specification:'Franklin Gothic Book, ';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="4.3612623"
+           y="116.20755"
+           id="text1445-2"
+           transform="rotate(-30)"><tspan
+             sodipodi:role="line"
+             id="tspan1443-5"
+             x="4.3612623"
+             y="116.20755"
+             style="font-size:4.23333311px;stroke-width:0.26458332">larger $\alpha$</tspan></text>
+      </g>
+      <g
+         id="g4328">
+        <ellipse
+           style="opacity:1;vector-effect:none;fill:#729fcf;fill-opacity:0.55;stroke:#204a87;stroke-width:0.5291667;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:markers fill stroke"
+           id="path2103"
+           cx="28.409603"
+           cy="132.66913"
+           rx="22.086988"
+           ry="11.043003"
+           transform="matrix(0.97460432,-0.22393395,0.22400906,0.97458706,0,0)" />
+        <path
+           style="fill:none;stroke:#204a87;stroke-width:0.26458332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           d="m 63.954516,132.7943 c 0,0 -0.05264,2.63551 1.947623,2.89906 2.000262,0.26356 2.158178,2.68822 2.158178,2.68822"
+           id="path4090"
+           inkscape:connector-curvature="0" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333311px;line-height:1.25;font-family:'Franklin Gothic Book';-inkscape-font-specification:'Franklin Gothic Book, ';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#204a87;fill-opacity:1;stroke:none;stroke-width:0.26458332;"
+           x="51.59972"
+           y="142.01709"
+           id="text4094"><tspan
+             sodipodi:role="line"
+             id="tspan4092"
+             x="51.59972"
+             y="142.01709"
+             style="fill:#204a87;stroke-width:0.26458332;">$\mathcal{Y}_\alpha = \{\vec{x}|\vec{x}^TP\vec{x}\leq \alpha\}$</tspan></text>
+      </g>
+    </g>
+    <g
+       id="g4513"
+       transform="rotate(45,72.018271,98.378357)"
+       style="stroke:#ef2929;stroke-width:0.5291667;stroke-miterlimit:4;stroke-dasharray:none">
+      <path
+         inkscape:connector-curvature="0"
+         id="path4507"
+         d="m 79.346652,101.28394 v 3.1183"
+         style="fill:none;stroke:#ef2929;stroke-width:0.5291667;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <path
+         style="fill:none;stroke:#ef2929;stroke-width:0.5291667;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         d="m 80.905802,102.84309 h -3.1183"
+         id="path4509"
+         inkscape:connector-curvature="0" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222223px;line-height:1.25;font-family:'Franklin Gothic Book';-inkscape-font-specification:'Franklin Gothic Book, ';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="122.20251"
+       y="-23.836079"
+       id="text1445-2-3"
+       transform="rotate(60)"><tspan
+         sodipodi:role="line"
+         x="122.20251"
+         y="-23.836079"
+         style="font-size:4.23333311px;stroke-width:0.26458332"
+         id="tspan4539">Support of</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.82222223px;line-height:1.25;font-family:'Franklin Gothic Book';-inkscape-font-specification:'Franklin Gothic Book, ';text-align:start;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="122.06993"
+       y="-16.624735"
+       id="text1445-2-3-1"
+       transform="rotate(60)"><tspan
+         sodipodi:role="line"
+         x="122.06993"
+         y="-16.624735"
+         style="font-size:4.23333311px;stroke-width:0.26458332"
+         id="tspan4539-3">the Ellipse</tspan></text>
+  </g>
+</svg>

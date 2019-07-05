@@ -1,0 +1,67 @@
+%% Creator: Inkscape inkscape 0.92.2, www.inkscape.org
+%% PDF/EPS/PS + LaTeX output extension by Johan Engelen, 2010
+%% Accompanies image file 'SupportEllipse.pdf' (pdf, eps, ps)
+%%
+%% To include the image in your LaTeX document, write
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics{<filename>.pdf}
+%% To scale the image, write
+%%   \def\svgwidth{<desired width>}
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics[width=<desired width>]{<filename>.pdf}
+%%
+%% Images with a different path to the parent latex file can
+%% be accessed with the `import' package (which may need to be
+%% installed) using
+%%   \usepackage{import}
+%% in the preamble, and then including the image with
+%%   \import{<path to file>}{<filename>.pdf_tex}
+%% Alternatively, one can specify
+%%   \graphicspath{{<path to file>/}}
+%% 
+%% For more information, please see info/svg-inkscape on CTAN:
+%%   http://tug.ctan.org/tex-archive/info/svg-inkscape
+%%
+\begingroup%
+  \makeatletter%
+  \providecommand\color[2][]{%
+    \errmessage{(Inkscape) Color is used for the text in Inkscape, but the package 'color.sty' is not loaded}%
+    \renewcommand\color[2][]{}%
+  }%
+  \providecommand\transparent[1]{%
+    \errmessage{(Inkscape) Transparency is used (non-zero) for the text in Inkscape, but the package 'transparent.sty' is not loaded}%
+    \renewcommand\transparent[1]{}%
+  }%
+  \providecommand\rotatebox[2]{#2}%
+  \ifx\svgwidth\undefined%
+    \setlength{\unitlength}{366.10714409bp}%
+    \ifx\svgscale\undefined%
+      \relax%
+    \else%
+      \setlength{\unitlength}{\unitlength * \real{\svgscale}}%
+    \fi%
+  \else%
+    \setlength{\unitlength}{\svgwidth}%
+  \fi%
+  \global\let\svgwidth\undefined%
+  \global\let\svgscale\undefined%
+  \makeatother%
+  \begin{picture}(1,0.57272461)%
+    \put(0,0){\includegraphics[width=\unitlength,page=1]{SupportEllipse.pdf}}%
+    \put(0.09146261,0.27678713){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$x_1$}}}%
+    \put(0.28467385,0.01455107){\color[rgb]{0,0,0}\makebox(0,0)[lb]{\smash{$x_2$}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=2]{SupportEllipse.pdf}}%
+    \put(0.78709387,0.29397142){\color[rgb]{0.9372549,0.16078431,0.16078431}\makebox(0,0)[lb]{\smash{$\vec{F}_i$}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=3]{SupportEllipse.pdf}}%
+    \put(0.78438123,0.23636076){\color[rgb]{0.9372549,0.16078431,0.16078431}\makebox(0,0)[lb]{\smash{$\vec{F}_i\vec{x}\leq f_i$}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=4]{SupportEllipse.pdf}}%
+    \put(0.32247013,0.44024635){\color[rgb]{0,0,0}\rotatebox{30}{\makebox(0,0)[lb]{\smash{larger $\alpha$}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=5]{SupportEllipse.pdf}}%
+    \put(0.2459717,0.10505267){\color[rgb]{0.1254902,0.29019608,0.52941176}\makebox(0,0)[lb]{\smash{$\mathcal{Y}_\alpha = \{\vec{x}|\vec{x}^TP\vec{x}\leq \alpha\}$}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=6]{SupportEllipse.pdf}}%
+    \put(0.51351282,0.40094396){\color[rgb]{0,0,0}\rotatebox{-60}{\makebox(0,0)[lb]{\smash{Support of}}}}%
+    \put(0.46464502,0.37391541){\color[rgb]{0,0,0}\rotatebox{-60}{\makebox(0,0)[lb]{\smash{the Ellipse}}}}%
+  \end{picture}%
+\endgroup%
